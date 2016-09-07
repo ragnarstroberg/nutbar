@@ -10,7 +10,7 @@ ifeq ($(DEBUG),on)
 endif
 
 OBJ = NuVec.o NuBasis.o NuProj.o JMState.o JBasis.o TransitionDensity.o
-EXE = NuShelltoMBPT CalcOBD
+EXE = NuShelltoMBPT
 
 all: $(EXE)
 
@@ -18,9 +18,6 @@ all: $(EXE)
 	$(CPP) -c $(FLAGS) $(INCLUDE) $^ -o $@ $(LIBS)
 
 NuShelltoMBPT : NuShelltoMBPT.cc $(OBJ)
-	$(CPP) $(FLAGS) $(INCLUDE) $^ -o $@ $(LIBS)
-
-CalcOBD: CalcOBD.cc $(OBJ)
 	$(CPP) $(FLAGS) $(INCLUDE) $^ -o $@ $(LIBS)
 
 clean:
