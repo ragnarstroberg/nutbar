@@ -155,15 +155,15 @@ void NuBasis::PrintBasis()
         for (int g=0;g<gwords;++g)
         {
            cout << "  " << setw(10) << vec[isp][i][g] << "   " << bitset<8*gwords*sizeof(mvec_type)>(vec[isp][i][g]) << endl;
-           cout << "  " << setw(10) << vec[isp][i][g] << "   " << bitset<8*gwords*sizeof(mvec_type)>(TimeReverse(vec[isp][i])[g]) << endl;
+//           cout << "  " << setw(10) << vec[isp][i][g] << "   " << bitset<8*gwords*sizeof(mvec_type)>(TimeReverse(vec[isp][i])[g]) << endl;
            vector<vector<mvec_type>> mvec_out;
            vector<float> coef_st;
-           LoweringOperator( vec[isp][i], mvec_out, coef_st);
-           cout << "------------- Lowering operator --------------------" << endl;
-           for (size_t ilow=0;ilow<mvec_out.size();++ilow)
-           {
-             cout << "  " << setw(10) << coef_st[ilow] << " x " << bitset<8*gwords*sizeof(mvec_type)>(mvec_out[ilow][0]) << endl;
-           }
+//           LoweringOperator( vec[isp][i], mvec_out, coef_st);
+//           cout << "------------- Lowering operator --------------------" << endl;
+//           for (size_t ilow=0;ilow<mvec_out.size();++ilow)
+//           {
+//             cout << "  " << setw(10) << coef_st[ilow] << " x " << bitset<8*gwords*sizeof(mvec_type)>(mvec_out[ilow][0]) << endl;
+//           }
         }
         vector<int> occ;
         for (int iword=0;iword<gwords;++iword)

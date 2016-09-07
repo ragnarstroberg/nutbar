@@ -17,12 +17,12 @@ JMState::JMState()
 
 
 JMState::JMState(const NuBasis& nubasis, const NuProj& nuproj, int istate)
- : J2(nuproj.j[istate]), T2(nuproj.t[istate]), M2(nuproj.j[istate]),pindx(nuproj.pindx[istate]),
+ : J2(nuproj.j[istate]), T2(nuproj.t[istate]), M2(nuproj.j[istate]),pindx(1,nuproj.pindx[istate]),
   m_orbits(nubasis.m_orbits)
 {
-  for (int iibf=0;iibf<nubasis.ibf[pindx-1];++iibf)
+  for (int iibf=0;iibf<nubasis.ibf[pindx[0]-1];++iibf)
   {
-    m_coefs[nubasis.vec[pindx-1][iibf]] += nuproj.coef_st[istate][iibf];
+    m_coefs[nubasis.vec[pindx[0]-1][iibf]] += nuproj.coef_st[istate][iibf];
   }
   EliminateZeros();
 }
@@ -34,7 +34,9 @@ void JMState::Print() const
 {
   cout << "2J = " << J2 << endl;
   cout << "2MJ = " << M2 << endl;
-  cout << "Partition index = " << pindx << endl;
+  cout << "Partition index = ";
+  for (size_t i=0;i<pindx.size()-1;++i) cout << pindx[i] << " x ";
+  cout << pindx.back() << endl;
   float sum_coef = 0;
   for ( auto it_state : m_coefs )
   {
@@ -89,12 +91,14 @@ JMState JMState::Jplus()
    float m_in_coef = it_mstate.second;
    vector<vector<mvec_type>> mvec_out;
    vector<float> coefs;
-   for (size_t i_m=0;i_m<m_orbits.size()-1;++i_m)  // don't bother starting with 0, since it's already in the lowest m_j state
+   for (size_t i_m=0;i_m<m_orbits.size();++i_m)  
    {
       int iword = i_m/(sizeof(mvec_type)*8);
       int ibit = i_m%(sizeof(mvec_type)*8);
-      if (ibit<1) continue;
-      if ( (not((mvec_in[iword]>>ibit)&0x1)) or (mvec_in[iword]>>(ibit+1))&0x1  ) continue; // Pauli principle
+      if ( (not((mvec_in[iword]>>ibit)&0x1)) or ((mvec_in[iword]>>(ibit+1))&0x1)  ) continue; // Pauli principle
+      if (mvec_in[0]==5)
+      {
+      }
       
       int j2  = m_orbits[i_m].j2;
       int mj2 = m_orbits[i_m].mj2;
@@ -166,6 +170,8 @@ JMState JMState::Jminus()
 }
 
 
+// TODO: This must be missing a phase factor
+// or else it's not exactly doing what I want...
 JMState JMState::TimeReverse()
 {
   JMState jmout(*this);
@@ -212,7 +218,7 @@ void JMState::RotateToM( int M_in )
   JMState& jm = *this;
   if (abs(jm.M2-M_in)>abs(jm.M2+M_in))
   {
-    jm = jm.TimeReverse();
+//    jm = jm.TimeReverse();
   }
   while( jm.M2 > M_in) jm = jm.Jminus();
   while( jm.M2 < M_in) jm = jm.Jplus();
@@ -284,6 +290,19 @@ JMState JMState::operator*(const double rhs)
 }
 
 
+
+float JMState::Norm() const
+{
+  float norm = 0;
+  for (auto& it_m : m_coefs)
+  {
+    norm += it_m.second * it_m.second;
+  }
+  return sqrt(norm);
+}
+
+
+
 JMState JMState::OuterProduct( const JMState& rhs ) const
 {
   JMState jmout(*this);
@@ -296,6 +315,10 @@ JMState JMState::OuterProduct( const JMState& rhs ) const
       double coef = it_m1.second * it_m2.second;
       if (abs(coef)>1e-8)
         jmout.m_coefs[ key ] = coef;
+//      if (J2 != rhs.J2)
+//      {
+//        cout << it_m1.first[0] << "  (" << (it_m1.first[0] >>12) << ")  " << it_m2.first[0] << "  " << it_m1.second << " " << it_m2.second << endl;
+//      }
     }
   }
   return jmout;
@@ -327,7 +350,7 @@ vector<mvec_type> operator+( const vector<mvec_type>& lhs, const vector<mvec_typ
 // Clebsch-Gordan coefficient
 double CG(int j2a, int m2a, int j2b, int m2b, int J2, int M2)
 {
-  return (1-(j2a-j2b+M2)%4) * sqrt(J2+1) * gsl_sf_coupling_3j(j2a,j2b,J2,m2a,m2b,-M2);
+  return (1-abs(j2a-j2b+M2)%4) * sqrt(J2+1) * gsl_sf_coupling_3j(j2a,j2b,J2,m2a,m2b,-M2);
 }
 
 
@@ -342,6 +365,8 @@ JMState TensorProduct( JMState jm1, JMState jm2, int J, int M)
   jmout.m_coefs.clear();
   jmout.SetJ(J);
   jmout.SetM(M);
+  for (auto p : jm2.pindx) jmout.pindx.push_back(p);
+
 
   // start jm1 and jm2 in the proper m states
 //  cout << "Rotating M1 to " << m1 << "  and M2 to " << m2 << endl;
@@ -350,14 +375,20 @@ JMState TensorProduct( JMState jm1, JMState jm2, int J, int M)
   jm2.RotateToM(m2);
   while(jm1.M2 >= m1_min)
   {
-//    cout << "M1 = " << jm1.M2 << "  M2 = " << jm2.M2 << endl;
     double clebsch = CG(jm1.J2, jm1.M2, jm2.J2, jm2.M2, J, M);
-    jmout += clebsch * jm1.OuterProduct(jm2) ;
+//    if (jm1.J2 != jm2.J2 and abs(clebsch)>1e-4)
+//    {
+//      cout << "J1,J2 = " << jm1.J2 << " " << jm2.J2
+//           << "  M1 = " << jm1.M2 << "  M2 = " << jm2.M2
+//           << "   clebsch = " << clebsch << endl;
+//    }
+    if (abs(clebsch)>1e-4)
+       jmout += clebsch * ( jm1.OuterProduct(jm2) ) ;
+
     jm1 = jm1.Jminus();
     jm2 = jm2.Jplus();
     if (jm2.M2 > jm2.J2) break;
   }
-
   return jmout;
 
 }

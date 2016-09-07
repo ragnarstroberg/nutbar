@@ -9,16 +9,19 @@ ifeq ($(DEBUG),on)
   FLAGS += -g
 endif
 
-OBJ = NuVec.o NuBasis.o NuProj.o JMState.o JBasis.o
-EXE = NuShelltoMBPT
+OBJ = NuVec.o NuBasis.o NuProj.o JMState.o JBasis.o TransitionDensity.o
+EXE = NuShelltoMBPT CalcOBD
 
 all: $(EXE)
 
 %.o : %.cc
 	$(CPP) -c $(FLAGS) $(INCLUDE) $^ -o $@ $(LIBS)
 
-NuShelltoMBPT : NuSHelltoMBPT.cc $(OBJ)
+NuShelltoMBPT : NuShelltoMBPT.cc $(OBJ)
+	$(CPP) $(FLAGS) $(INCLUDE) $^ -o $@ $(LIBS)
+
+CalcOBD: CalcOBD.cc $(OBJ)
 	$(CPP) $(FLAGS) $(INCLUDE) $^ -o $@ $(LIBS)
 
 clean:
-	@rm $(EXE) $(OBJ)
+	rm -f $(EXE) $(OBJ)

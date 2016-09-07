@@ -25,7 +25,8 @@ struct KeyHash
 class JMState
 {
  public:
-  int J2, T2, M2, pindx;
+  int J2, T2, M2;//, pindx;
+  vector<int> pindx;
   unordered_map<vector<mvec_type>,float,KeyHash> m_coefs;
   vector<MschemeOrbit> m_orbits;
 
@@ -46,6 +47,8 @@ class JMState
   void SetJ(int j){J2 = j;};
   void SetM(int m){M2 = m;};
 
+  float Norm() const;
+
   JMState OuterProduct( const JMState&) const;
 
   JMState& operator=(const JMState&);
@@ -62,6 +65,8 @@ JMState TensorProduct( JMState jm1, JMState jm2, int J2, int M2);
 JMState operator*(const double, const JMState&);
 
 vector<mvec_type> operator+( const vector<mvec_type>& lhs, const vector<mvec_type>& rhs);
+
+double CG(int j2a, int m2a, int j2b, int m2b, int J2, int M2);
 
 #define JMState_h
 #endif

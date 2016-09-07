@@ -21,10 +21,12 @@ class NuVec
  public:
 
   int32_t no_state,no_level;
+  int J2;
   vector<float> alpha; //eigenvalues
   vector<vector<float>> coefT;
   
   NuVec();
+  NuVec(int J2);
   void ReadFile(string fname);
   void PrintVectors();
   void PrintDetailedVectors();

@@ -6,6 +6,10 @@
 NuVec::NuVec()
 {}
 
+NuVec::NuVec(int J2)
+: J2(J2)
+{}
+
 
 void NuVec::ReadFile(string fname)
 {
