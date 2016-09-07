@@ -301,11 +301,16 @@ double TransitionDensity::OBTD(int J_index_i, int eigvec_i, int J_index_f, int e
   if ((J2f+Lambda2 < J2i) or (abs(J2f-Lambda2)>J2i)) return 0;
   
   double clebsch_fi = CG(J2f,0,Lambda2,0,J2i,0);
-  if (abs(clebsch_fi)<1e-9) cout << "Warning got zero Clebsch while inverting the Wigner-Eckart theorem" << endl;
+  if (abs(clebsch_fi)<1e-9)
+  {
+     cout << "Warning got zero Clebsch while inverting the Wigner-Eckart theorem" << endl;
+     return 0;
+  }
   
+  // find m-scheme orbits so that m_a = m_b, which will work for mu=0
   double obd = 0;
-  while ( m_orbits[m_index_a].mj2 < m_orbits[m_index_b].mj2 ) m_index_a++;
-  while ( m_orbits[m_index_b].mj2 < m_orbits[m_index_a].mj2 ) m_index_b++;
+  while ( m_orbits[m_index_a].mj2 < min(j2_a, m_orbits[m_index_b].mj2) ) m_index_a++;
+  while ( m_orbits[m_index_b].mj2 < min(j2_b, m_orbits[m_index_a].mj2) ) m_index_b++;
   if (m_orbits[m_index_a].j2 != j2_a) return 0;
   if (m_orbits[m_index_b].j2 != j2_b) return 0;
   m_index_a--;
@@ -314,25 +319,119 @@ double TransitionDensity::OBTD(int J_index_i, int eigvec_i, int J_index_f, int e
   {
     m_index_a++;
     m_index_b++;
+    int phase_b = (1-(j2_b-im)%4);
     for ( auto& it_amp : amplitudes )
     {
       auto& key = it_amp.first;
       if ( not( (key[0] >> m_index_a)&0x1) ) continue;
       if ( m_index_a != m_index_b and   ( (key[0] >> m_index_b)&0x1) ) continue;
-      float amp_i = it_amp.second[J_index_i][eigvec_i];
+      double amp_i = it_amp.second[J_index_i][eigvec_i];
       if (abs(amp_i)<1e-6) continue;
       auto new_key = key;
       new_key[0] &= ~( 0x1 << (m_index_a));
       new_key[0] |=  ( 0x1 << (m_index_b));
-      float amp_f = amplitudes[new_key][J_index_f][eigvec_f];
-      float clebsch = CG(j2_a,im,j2_b,-im,Lambda2,0) * (1-(j2_b-im)%4);
-      obd += clebsch * amp_i * amp_f;
+      int phase_ladder = 0;
+      for (int iphase=min(m_index_a,m_index_b)+1;iphase<max(m_index_a,m_index_b);++iphase) phase_ladder += ( key[0] >>iphase )&0x1;
+      phase_ladder = 1-2*(phase_ladder%2);
+      double amp_f = amplitudes[new_key][J_index_f][eigvec_f];
+      double clebsch = CG(j2_a,im,j2_b,-im,Lambda2,0) ;
+      obd += clebsch * amp_i * amp_f * phase_ladder * phase_b;
     }
   }
   
   obd *= sqrt((J2i+1.)/(Lambda2+1)) / clebsch_fi;
 
   return obd;
+
+}
+
+
+
+// This does not work yet!!
+double TransitionDensity::TBTD(int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int m_index_a, int m_index_b, int m_index_c, int m_index_d, int J2ab, int J2cd, int Lambda2 )
+{
+
+  int J2i = Jlist[J_index_i];
+  int J2f = Jlist[J_index_f];
+  
+  int j2_a = m_orbits[m_index_a].j2;
+  int j2_b = m_orbits[m_index_b].j2;
+  int j2_c = m_orbits[m_index_c].j2;
+  int j2_d = m_orbits[m_index_d].j2;
+
+  // start out with the maximally-projected
+  m_index_a += (j2_a - m_orbits[m_index_a].mj2)/2;
+  m_index_b += (j2_b - m_orbits[m_index_b].mj2)/2;
+  m_index_c += (j2_c - m_orbits[m_index_c].mj2)/2;
+  m_index_d += (j2_d - m_orbits[m_index_d].mj2)/2;
+
+  if ((J2f+Lambda2 < J2i) or (abs(J2f-Lambda2)>J2i)) return 0;
+  if ((j2_a+j2_b<J2ab) or (abs(j2_a+j2_b)>J2ab)) return 0;
+  if ((j2_c+j2_d<J2cd) or (abs(j2_c+j2_d)>J2cd)) return 0;
+  if ((J2ab+J2cd < Lambda2) or (abs(J2ab-J2cd)>Lambda2)) return 0;
+  
+  double clebsch_fi = CG(J2f,0,Lambda2,0,J2i,0);
+  if (abs(clebsch_fi)<1e-9)
+  {
+     cout << "Warning got zero Clebsch while inverting the Wigner-Eckart theorem" << endl;
+     return 0;
+  }
+  
+  double tbd = 0;
+  int Mab_max = min(J2ab,J2cd);
+
+  for (int Mab=-Mab_max;Mab<=Mab_max;Mab+=2)
+  {
+//    int Mcd = -Mab;
+    double clebsch_abcd = CG(J2ab,Mab,J2cd,-Mab,Lambda2,0);
+    if ( abs(clebsch_abcd)<1e-7) continue;
+    int ma_min = max(-j2_a, Mab+j2_b);
+    int ma_max = min(j2_a, Mab-j2_b);
+    for (int ma=ma_min;ma<=ma_max;ma+=2)
+    {
+      int mb=Mab-ma;
+      double clebsch_ab = CG(j2_a,ma, j2_b,mb, J2ab,Mab);
+      if ( abs(clebsch_ab)<1e-7) continue;
+      int ia = m_index_a - ( j2_a -ma )/2;
+      int ib = m_index_b - ( j2_b -mb )/2;
+      int md_min = max(-j2_d, Mab+j2_c);
+      int md_max = min(j2_d, Mab-j2_c);
+      for (int md=md_min;md<=md_max;md+=2)
+      {
+        int mc = Mab-md;
+        double clebsch_cd = CG(j2_d,md, j2_c,mc, J2cd,Mab); // Mcd = -Mab, and another (-) comes from getting rid of the tildes
+        if ( abs(clebsch_cd)<1e-7) continue;
+        int ic = m_index_c - ( j2_c -mc )/2;
+        int id = m_index_d - ( j2_d -md )/2;
+        int phasecd = 1- (j2_c+j2_d - mc-md)%4; // phase from getting rid of the tildes
+        for (auto& it_amp : amplitudes )
+        {
+          double amp_i = it_amp.second[J_index_i][eigvec_i];
+          if (abs(amp_i)<1e-7) continue;
+          auto& key = it_amp.first;
+          if (not( (key[0] >> ic) & (key[0] >> id) ) ) continue;
+          auto new_key = key;
+          new_key[0] &= !( (0x1 << ic) + (0x1 << id)); // remove particles from c and then from d  (d-c-)
+          if (( (new_key[0] >> ia) | (new_key[0] >> ib) ) ) continue; // orbits are already occupied
+
+          // pick up a phase from commuting the ladder operators
+          int phase_ladder = 0;
+          for (int iphase = min(ic,id)+1;iphase<max(ic,id);++iphase) phase_ladder += ( key[0] >>iphase )&0x1;
+          if (id>ic) phase_ladder++;
+          for (int iphase = min(ia,ib)+1;iphase<max(ia,ib);++iphase) phase_ladder += ( new_key[0] >>iphase )&0x1;
+          if (ia>ib) phase_ladder++;
+          phase_ladder = 1-2*(phase_ladder%2);
+
+          new_key[0] |= ( (0x1 << ia) + (0x1 << ib)); // add particles to b and then to a  (a+b+)
+          double amp_f = amplitudes[new_key][J_index_f][eigvec_f];
+          tbd += amp_i * amp_f * clebsch_abcd * clebsch_ab * clebsch_cd * phasecd * phase_ladder;
+        }
+      }
+    }
+  }
+
+  tbd *= sqrt((J2i+1.)/(Lambda2+1)) / clebsch_fi;
+  return tbd;
 
 }
 
