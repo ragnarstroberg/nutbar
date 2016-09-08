@@ -2,7 +2,7 @@
 CPP = g++
 
 FLAGS = -std=c++11
-INCLUDE = 
+INCLUDE = -I$(HOME)/include/armadillo
 LIBS = -lgsl -lopenblas
 
 ifeq ($(DEBUG),on)
