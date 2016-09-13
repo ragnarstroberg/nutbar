@@ -55,6 +55,7 @@ class TransitionDensity
   void WriteTRDENS_input(string fname);
   void SetMaxStatesPerJ( int J2, int imax){ max_states_per_J[J2] = imax;};
   void GetAZFromFileName( );
+  void ReadSPfile();
 
 
 };

@@ -167,14 +167,23 @@ void TransitionDensity::ReadFiles( )
   ifstream testread; // for checking if files exist
   ostringstream ostr;
   vector<string> Afiles,Bfiles;
-  GetAZFromFileName();
+  GetAZFromFileName(); // Make a default guess of the core
+  ReadSPfile(); // If the sp file is there, use that to get the core
+  cout << "Acore,Zcore = " << Acore << " " << Zcore << endl;
+
   int nvalence_protons = Z - Zcore;
   int nvalence_neutrons = A-Z - (Acore-Zcore);
   for ( auto j : Jlist ) cout << j << " ";
   cout << endl;
   MJtot = (*min_element(begin(Jlist),end(Jlist)))%2;
 
-
+  for (auto j : Jlist )
+  {
+    if (j%2 != A%2)
+    {
+      cout << "Warning A=" << A << " and J*2 = " << j << ".  This isn't good" << endl;
+    }
+  }
   
   
   // Find all the prj and nba files
@@ -253,7 +262,7 @@ void TransitionDensity::ReadFiles( )
   for (size_t ivec=0; ivec<nuvec_list.size(); ++ivec)
   {
    int imax = nuvec_list[ivec].no_level;
-   if ( max_states_per_J.find(nuvec_list[ivec].J2) != max_states_per_J.end() ) imax = max_states_per_J[nuvec_list[ivec].J2];
+   if ( max_states_per_J.find(nuvec_list[ivec].J2) != max_states_per_J.end() ) imax = min(imax,max_states_per_J[nuvec_list[ivec].J2]);
     blank_vector.push_back(vector<float>(imax, 0.));
     total_number_levels += blank_vector.back().size();
   }
@@ -276,7 +285,7 @@ void TransitionDensity::CalculateMschemeAmplitudes()
    {
 
      int imax = nuvec.no_level;
-     if ( max_states_per_J.find(nuvec.J2) != max_states_per_J.end() ) imax = max_states_per_J[nuvec.J2];
+     if ( max_states_per_J.find(nuvec.J2) != max_states_per_J.end() ) imax = min(imax,max_states_per_J[nuvec.J2]);
 //     vector<float> level_coefs(nuvec.no_level,0.0);
      vector<float> level_coefs(imax,0.0);
 //     for (int ilevel=0;ilevel<nuvec.no_level;++ilevel)
@@ -285,6 +294,11 @@ void TransitionDensity::CalculateMschemeAmplitudes()
        level_coefs[ilevel] = nuvec.coefT[ilevel][istate];
      }
   
+     if (istate>=jbasis.basis_states.size())
+     {
+       cout << "ERROR istate = " << istate << ",  basis_states.size() = " << jbasis.basis_states.size() << endl;
+       return;
+     }
      JMState& jmst = jbasis.basis_states[istate];
      for (auto& it_mstate : jmst.m_coefs)
      {
@@ -605,7 +619,7 @@ void TransitionDensity::WriteEGV(string fname)
   for (auto& nuvec : nuvec_list)
   {
    int imax = nuvec.no_level;
-   if ( max_states_per_J.find(nuvec.J2) != max_states_per_J.end() ) imax = max_states_per_J[nuvec.J2];
+   if ( max_states_per_J.find(nuvec.J2) != max_states_per_J.end() ) imax = min(imax,max_states_per_J[nuvec.J2]);
    for (int ilevel=0;ilevel<imax;++ilevel)
    {
      output << right << fixed << setw(12) << setprecision(4) << nuvec.alpha[ilevel] << " " << nuvec.J2/2.0 << " " << 0 << " " << 0.0 << endl;
@@ -730,11 +744,24 @@ void TransitionDensity::GetAZFromFileName(  )
   istringstream( trimmed_basename.substr(2,2) ) >> A;
 
   // now guess at what the core should be, assuming a full major oscillator shell valence space
-  for (int N=0;(N+1)*(N+2)*(N+3)/3<Z;++N) Zcore = (N+1)*(N+2)*(N+3)/3; 
-  for (int N=0;(N+1)*(N+2)*(N+3)/3<(A-Z);++N) Acore = Zcore + (N+1)*(N+2)*(N+3)/3; 
-  cout << "Acore,Zcore = " << Acore << " " << Zcore << endl;
+  for (int N=0;(N+1)*(N+2)*(N+3)/3<=Z;++N) Zcore = (N+1)*(N+2)*(N+3)/3; 
+  for (int N=0;(N+1)*(N+2)*(N+3)/3<=(A-Z);++N) Acore = Zcore + (N+1)*(N+2)*(N+3)/3; 
   
 }
+
+
+
+void TransitionDensity::ReadSPfile()
+{
+  string sp_file_name = sps_file_name.substr(0,sps_file_name.find_last_of(".")) + ".sp";
+  ifstream infile(sp_file_name);
+  if (not infile.good()) return;
+  infile.ignore(256,'\n');
+  infile.ignore(256,'\n');
+  infile >> Acore >> Zcore;
+
+}
+
 
 
 
@@ -758,6 +785,10 @@ vector<float>& operator+=(vector<float>& lhs, const vector<float>& rhs)
   for (size_t i=0;i<lhs.size();++i) lhs[i] += rhs[i];
   return lhs;
 }
+
+
+
+
 
 
 
