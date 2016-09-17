@@ -1,5 +1,7 @@
 #include <cmath>
 #include <sstream>
+#include <string>
+#include <iostream>
 #include <algorithm>
 #include <armadillo>
 
@@ -313,7 +315,6 @@ void TransitionDensity::CalculateMschemeAmplitudes()
 }
 
 
-// this doesn't seem to work yet.
 double TransitionDensity::OBTD(int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int m_index_a, int m_index_b, int Lambda2 )
 {
 
@@ -348,7 +349,26 @@ double TransitionDensity::OBTD(int J_index_i, int eigvec_i, int J_index_f, int e
 //    cout << "    " << m_index_a << "  " << m_index_b << "   "
 //                   << m_orbits[m_index_a].j2 << "," << m_orbits[m_index_a].mj2 << "  "
 //                   << m_orbits[m_index_b].j2 << "," << m_orbits[m_index_b].mj2 << "  " << endl;
+
+    // convention: tilded destruction operator b~(m) = (-1)**(jb + mb) b(-m)
+    //                                         b(m)  = (-1)**(jb -mb) b~(-m)
     int phase_b = (1-(j2_b-im)%4);
+    double clebsch = CG(j2_a,im,j2_b,-im,Lambda2,0) ;
+
+//      if (j2_a==1 and j2_b==1 and m_index_a==m_index_b)
+//      {
+//         cout << "OBTD(s1/s1) " << setw(3) << im << " " 
+//              << setw(8) << setprecision(5) << fixed  << clebsch << " "
+////              << setw(8) << setprecision(5) << fixed  << amp_i << " "
+////              << setw(8) << setprecision(5) << fixed  << amp_f << " "
+////              << setw(8) << setprecision(5) << fixed  << phase_ladder
+//              << setw(8) << setprecision(5) << fixed  << " "
+//              << setw(8) << setprecision(5) << fixed  << phase_b << "  "
+//             << endl;
+////              << setw(8) << setprecision(5) << fixed  << obd << endl;
+//      }
+
+
     for ( auto& it_amp : amplitudes )
     {
       auto& key = it_amp.first;
@@ -368,8 +388,9 @@ double TransitionDensity::OBTD(int J_index_i, int eigvec_i, int J_index_f, int e
       phase_ladder = 1-2*(phase_ladder%2);
 //      phase_ladder = 1;
       double amp_f = amplitudes[new_key][J_index_f][eigvec_f];
-      double clebsch = CG(j2_a,im,j2_b,-im,Lambda2,0) ;
+//      double clebsch = CG(j2_a,im,j2_b,-im,Lambda2,0) ;
       obd += clebsch * amp_i * amp_f * phase_ladder * phase_b;
+
 //      if (m_orbits[m_index_a].j2==3 and m_orbits[m_index_b].j2==3)
 //         cout << "obd = " << obd << endl;
     }
@@ -401,6 +422,7 @@ double TransitionDensity::TBTD(int J_index_i, int eigvec_i, int J_index_f, int e
   m_index_c += (j2_c - m_orbits[m_index_c].mj2)/2;
   m_index_d += (j2_d - m_orbits[m_index_d].mj2)/2;
 
+
   if ((J2f+Lambda2 < J2i) or (abs(J2f-Lambda2)>J2i)) return 0;
   if ((j2_a+j2_b<J2ab) or (abs(j2_a-j2_b)>J2ab)) return 0;
   if ((j2_c+j2_d<J2cd) or (abs(j2_c-j2_d)>J2cd)) return 0;
@@ -408,22 +430,29 @@ double TransitionDensity::TBTD(int J_index_i, int eigvec_i, int J_index_f, int e
   
 //  cout << "made it past traingle checks" << endl;
 
+
   double clebsch_fi = CG(J2i,0,Lambda2,0,J2f,0);
   if (abs(clebsch_fi)<1e-9)
   {
      cout << "Warning got zero Clebsch while inverting the Wigner-Eckart theorem" << endl;
      return 0;
   }
-  
+
   double tbd = 0;
   int Mab_max = min(J2ab,J2cd);
+  double norm = 1;
+  if (m_index_a==m_index_b) norm *= sqrt(0.5);  // accounting for restricted sum and 1/4 out in front ?
+  if (m_index_c==m_index_d) norm *= sqrt(0.5);  // accounting for restricted sum and 1/4 out in front ?
 
   for (int Mab=-Mab_max;Mab<=Mab_max;Mab+=2)
   {
-    double clebsch_abcd = CG(J2ab,Mab,J2cd,-Mab,Lambda2,0);
+    int Mcd = 0 - Mab;
+    int phasecd = (1- abs(J2cd - Mcd)%4); // phase from getting rid of the tildes
+    double clebsch_abcd = CG(J2ab,Mab,J2cd,Mcd,Lambda2,0);
     if ( abs(clebsch_abcd)<1e-7) continue;
     int ma_min = max(-j2_a, Mab-j2_b);
     int ma_max = min(j2_a, Mab+j2_b);
+
     for (int ma=ma_min;ma<=ma_max;ma+=2)
     {
       int mb=Mab-ma;
@@ -431,21 +460,33 @@ double TransitionDensity::TBTD(int J_index_i, int eigvec_i, int J_index_f, int e
       if ( abs(clebsch_ab)<1e-7) continue;
       int ia = m_index_a - ( j2_a -ma )/2;
       int ib = m_index_b - ( j2_b -mb )/2;
-      int md_min = max(-j2_d, Mab-j2_c);
-      int md_max = min(j2_d, Mab+j2_c);
-      for (int md=md_min;md<=md_max;md+=2)
+      if (ib==ia) continue;
+//      int md_min = max(-j2_d, -Mcd-j2_c);
+//      int md_max = min(j2_d, -Mcd+j2_c);
+      int mc_min = max(-j2_c, Mab-j2_d);
+      int mc_max = min(j2_c, Mab+j2_d);
+//      int mc_min = -j2_c;
+//      int mc_max = j2_c;
+
+//      for (int md=md_min;md<=md_max;md+=2)
+      for (int mc=mc_min;mc<=mc_max;mc+=2)
       {
-        int mc = Mab-md;
-        double clebsch_cd = CG(j2_d,md, j2_c,mc, J2cd,Mab); // Mcd = -Mab, and another (-) comes from getting rid of the tildes
+//        int mc = Mcd-md;
+        int md = -Mcd-mc;
+//        double clebsch_cd = CG(j2_d,md, j2_c,mc, J2cd,Mab); // Mcd = -Mab, and another (-) comes from getting rid of the tildes
+        double clebsch_cd = CG(j2_c,mc, j2_d, md, J2cd,-Mcd); // Mcd = -Mab, and another (-) comes from getting rid of the tildes
         if ( abs(clebsch_cd)<1e-7) continue;
         int ic = m_index_c - ( j2_c -mc )/2;
         int id = m_index_d - ( j2_d -md )/2;
-        int phasecd = 1- (j2_c+j2_d - mc-md)%4; // phase from getting rid of the tildes
+        if (ic==id) continue;
+//        int phasecd = (1- (j2_c+j2_d - mc -md)%4); // phase from getting rid of the tildes
+
         for (auto& it_amp : amplitudes )
         {
           double amp_i = it_amp.second[J_index_i][eigvec_i];
           if (abs(amp_i)<1e-7) continue;
           auto& key = it_amp.first;
+
           if (not(( (key[0] >> ic) & (key[0] >> id) )&0x1) ) continue;
           auto new_key = key;
           new_key[0] &= (~( (0x1 << ic) + (0x1 << id))); // remove particles from c and then from d  (d-c-)
@@ -460,23 +501,20 @@ double TransitionDensity::TBTD(int J_index_i, int eigvec_i, int J_index_f, int e
           phase_ladder = 1-2*(phase_ladder%2);
 
           new_key[0] |= ( (0x1 << ia) + (0x1 << ib)); // add particles to b and then to a  (a+b+)
-//          cout << "ia,ib,ic,id = " << ia << " " << ib << " " << ic << " " << id << endl;
-//          cout << "old_key = " << bitset<12>(key[0]) << " " << bitset<12>(key[0]>>12) << endl;
-//          cout << "new_key = " << bitset<12>(new_key[0]) << " " << bitset<12>(new_key[0]>>12) << endl;
-//          cout << "J_index_f = " << J_index_f << "  size of J vector = " << amplitudes[new_key].size() << endl;
+
           if (amplitudes.find(new_key) == amplitudes.end()) continue;
           if (amplitudes[new_key].size() < J_index_f) continue;
           if (amplitudes[new_key][J_index_f].size() < eigvec_f) continue;
+
           double amp_f = amplitudes[new_key][J_index_f][eigvec_f];
           tbd += amp_i * amp_f * clebsch_abcd * clebsch_ab * clebsch_cd * phasecd * phase_ladder;
 
-//          cout << "   " <<  ma << " " << mb << " " << Mab << " " << mc << " " << md << " " << -Mab << " " << amp_i << " " << amp_f << endl;
         }
       }
     }
   }
 
-  tbd *= sqrt((J2f+1.)/(Lambda2+1)) / clebsch_fi;
+  tbd *= sqrt((J2f+1.)/(Lambda2+1)) / clebsch_fi * norm;
   return tbd;
 
 }
@@ -510,7 +548,10 @@ arma::mat TransitionDensity::CalcOBTD( int J_index_i, int eigvec_i, int J_index_
 }
 
 
-void TransitionDensity::CalcTBTD( int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int Lambda2)
+
+
+
+arma::mat TransitionDensity::CalcTBTD( int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int Lambda2)
 {
   vector<int> jorbits;
   for (size_t i=0;i<m_orbits.size();++i )
@@ -530,6 +571,7 @@ void TransitionDensity::CalcTBTD( int J_index_i, int eigvec_i, int J_index_f, in
       int Jmax = ja+jb;
       for (int J2=Jmin;J2<=Jmax;J2+=2)
       {
+        if (a==b and (J2%4)>0) continue;
         cout << setw(3) << ket_a.size() << ": " << a << " " << b << " " << J2 << endl;
         ket_a.push_back(a);
         ket_b.push_back(b);
@@ -549,15 +591,205 @@ void TransitionDensity::CalcTBTD( int J_index_i, int eigvec_i, int J_index_f, in
       int c = ket_a[iket];
       int d = ket_b[iket];
       int J2cd = ket_J[iket];
-//      cout << jorbits[a] << " " << jorbits[b] << " " << jorbits[c] << " " << jorbits[d] << "  " << J2ab << " " << J2cd << endl;
       tbtd(ibra,iket) = TBTD(  J_index_i,  eigvec_i,  J_index_f,  eigvec_f,  jorbits[a], jorbits[b],  jorbits[c], jorbits[d],  J2ab,  J2cd,  Lambda2 );
+//      if (ibra==47 and iket==64)
+//      {
+//        cout << "!!!!!!! " << jorbits[a] << " " << jorbits[b] << " " << jorbits[c] << " " << jorbits[d] << " " << J2ab << " " << J2cd << " : " << tbtd(ibra,iket) << endl;
+//      }
       if (abs(tbtd(ibra,iket))>1e-7)
         cout << ibra << "  " << iket << "   " << tbtd(ibra,iket) << endl;
     }
   }
   cout << "all done here" << endl;
-
+  return tbtd;
 }
+
+
+arma::mat TransitionDensity::GetOneBodyTransitionOperator( string filename)
+{
+
+  ifstream opfile(filename);
+  string line,bufstring;
+  int Rank_J, Rank_T, parity;
+
+  while ( line.find("Rank_J") == string::npos)   getline(opfile, line);
+  istringstream( line.substr( line.rfind(":")+1 ) ) >> Rank_J;
+  while ( line.find("Rank_T") == string::npos)   getline(opfile, line);
+  istringstream( line.substr( line.rfind(":")+1 ) ) >> Rank_T;
+  while ( line.find("Parity") == string::npos)   getline(opfile, line);
+  istringstream( line.substr( line.rfind(":")+1 ) ) >> parity;
+
+  vector<int> jorbits;
+  for (size_t i=0;i<m_orbits.size();i+= m_orbits[i].j2+1)
+  {
+    if (m_orbits[i].mj2 == -m_orbits[i].j2) jorbits.push_back(i);
+  }
+
+  while ( line.find("index") == string::npos)   getline(opfile, line);
+  vector<int> orbits_in;
+  getline(opfile, line);
+  while ( line.size() > 5 )  // no specific reason why 5. Just looking for the empty comment line
+  {
+    int index,n,l,j2,tz2;
+    istringstream(line.substr(1)) >> index >> n >> l >> j2 >> tz2;
+    // find the corresponding j-orbit
+    for (size_t i=0;i<jorbits.size(); ++i)
+    { // we use -tz2 because we switch isospin conventions
+      if (    m_orbits[jorbits[i]].n==n  and m_orbits[jorbits[i]].l2==2*l and m_orbits[jorbits[i]].j2==j2 and m_orbits[jorbits[i]].tz2==-tz2)
+      {
+         orbits_in.push_back(i);
+         cout << orbits_in.size() << " :  " << i << "  " << jorbits[i] << "  " << n << " " << l << " " << j2 << " " << tz2 << endl;
+      }
+    }
+
+    getline(opfile, line);
+  }
+
+
+  for (size_t i=0;i<orbits_in.size();++i) cout << i << " :  " << orbits_in[i] << endl;
+
+  arma::mat Op1b(jorbits.size(),jorbits.size(),arma::fill::zeros);
+
+  getline(opfile, line); // skip final header
+  int a,b;
+  double Op_ab;
+  while ( opfile.good() )
+  {
+    opfile >> a >> b >> Op_ab;
+    a = orbits_in[a-1]; // fortran indexing...
+    b = orbits_in[b-1];
+    int j2a = m_orbits[jorbits[a]].j2;
+    int j2b = m_orbits[jorbits[b]].j2;
+    Op1b(a,b) = Op_ab;
+//    Op1b(b,a) = (1 - abs( m_orbits[jorbits[a]].j2 - m_orbits[jorbits[b]].j2 )%4) * Op_ab; // phase factor (-1)^(ja-jb)
+    Op1b(b,a) = (1 - abs(j2a-j2b)%4) * Op_ab; // phase factor (-1)^(ja-jb)
+  }
+
+  return Op1b;
+}
+
+
+
+arma::mat TransitionDensity::GetTwoBodyTransitionOperator( string filename)
+{
+
+  ifstream opfile(filename);
+  string line,bufstring;
+  int Rank_J, Rank_T, parity;
+
+  while ( line.find("Rank_J") == string::npos)   getline(opfile, line);
+  istringstream( line.substr( line.rfind(":")+1 ) ) >> Rank_J;
+  while ( line.find("Rank_T") == string::npos)   getline(opfile, line);
+  istringstream( line.substr( line.rfind(":")+1 ) ) >> Rank_T;
+  while ( line.find("Parity") == string::npos)   getline(opfile, line);
+  istringstream( line.substr( line.rfind(":")+1 ) ) >> parity;
+
+  // set up the j scheme basis from the m scheme basis
+  vector<int> jorbits;
+  for (size_t i=0;i<m_orbits.size();i+= m_orbits[i].j2+1)
+  {
+    if (m_orbits[i].mj2 == -m_orbits[i].j2) jorbits.push_back(i);
+  }
+
+  // Read in the single particle basis used in the file
+  while ( line.find("index") == string::npos)   getline(opfile, line);
+  vector<int> orbits_in;
+  getline(opfile, line);
+  while ( line.size() > 5 and line.find("a")==string::npos )  // no specific reason why 5. Just looking for the empty comment line
+  {
+    int index,n,l,j2,tz2;
+    istringstream(line.substr(1)) >> index >> n >> l >> j2 >> tz2;
+    // find the corresponding j-orbit
+    for (size_t i=0;i<jorbits.size(); ++i)
+    {// we use -tz2 because we switch isospin conventions
+      if (    m_orbits[jorbits[i]].n==n  and m_orbits[jorbits[i]].l2==2*l and m_orbits[jorbits[i]].j2==j2 and m_orbits[jorbits[i]].tz2==-tz2)
+      {
+         orbits_in.push_back(i);
+//         cout << orbits_in.size() << " :  " << i << "  " << jorbits[i] << "  " << n << " " << l << " " << j2 << " " << tz2 << endl;
+      }
+    }
+    getline(opfile, line);
+  }
+
+  cout << "------------------------------------" << endl;
+
+  for (size_t i=0;i<orbits_in.size();++i) cout << i << " :  " << orbits_in[i] << endl;
+
+
+  vector<int> ket_a, ket_b, ket_J;
+
+  for (size_t a=0;a<jorbits.size();++a)
+  {
+    int ja = m_orbits[jorbits[a]].j2;
+    for (size_t b=a; b<jorbits.size();++b)
+    {      
+      int jb = m_orbits[jorbits[b]].j2;
+      int Jmin = abs(ja-jb);
+      int Jmax = ja+jb;
+      for (int J2=Jmin;J2<=Jmax;J2+=2)
+      {
+        if (a==b and (J2%4)>0) continue;
+//        cout << setw(3) << ket_a.size() << ": " << a << " " << b << " " << J2 << endl;
+        ket_a.push_back(a);
+        ket_b.push_back(b);
+        ket_J.push_back(J2);
+      }
+    }
+  }
+
+  arma::mat Op2b(ket_J.size(), ket_J.size(), arma::fill::zeros);
+
+  if ( line.find("Jab")==string::npos )
+    getline(opfile, line); // skip final header
+  int a,b,c,d,Jab,Jcd;
+  double Op_abcd;
+  cout << "line before reading matrix elements: " << line << endl;
+  while ( opfile >> a >> b >> c >> d >> Jab >> Jcd >> Op_abcd )
+  {
+    a = orbits_in[a-1]; // fortran indexing...
+    b = orbits_in[b-1];
+    c = orbits_in[c-1]; // fortran indexing...
+    d = orbits_in[d-1];
+    Jab *=2;
+    Jcd *=2;
+    if (a>b)
+    {
+      swap(a,b);
+      Op_abcd *= -(1-abs(m_orbits[jorbits[a]].j2 + m_orbits[jorbits[b]].j2 - Jab)%4);
+    }
+    if (c>d)
+    {
+      swap(c,d);
+      Op_abcd *= -(1-abs(m_orbits[jorbits[c]].j2 + m_orbits[jorbits[d]].j2 - Jcd)%4);
+    }
+//    if (a==b) Op_abcd *= 0.5; // since we only store a<=b, c<=d we get a factor 4/(1+delta_ab)(1_delta_cd)
+//    if (c==d) Op_abcd *= 0.5; // which combines with the 1/4 out in front
+
+    size_t ibra=0,iket=0;
+    while( ibra<ket_a.size() and not( (ket_a[ibra]==a) and (ket_b[ibra]==b) and ket_J[ibra]==Jab) ) ibra++;
+    while( iket<ket_a.size() and not( (ket_a[iket]==c) and (ket_b[iket]==d) and ket_J[iket]==Jcd) ) iket++;
+
+    if (ibra==0 and iket==1)
+    {
+     cout << "aaaaa   " << a << " " << b << " " << c << " " << d << "  " << Jab << " " << Jcd << " "  << Op_abcd << endl;
+    }
+
+    if (a==3 and b==3 and c==3 and d==3 and Jab==0 and Jcd==4)
+    {
+      cout << "bbbb   " << a << " " << b << " " << c << " " << d << " " << Jab << " " << Jcd << " " << Op_abcd << "   " << ibra << " " << iket << endl;
+    }
+
+    Op2b(ibra,iket) = Op_abcd;
+    if (ibra!=iket)
+      Op2b(iket,ibra) = (1 - abs(Jab+Jcd )%4) * Op_abcd; // phase factor (-1)^(Jab-Jcd)
+  }
+
+  return Op2b;
+}
+
+
+
+
 
 void TransitionDensity::WriteEGV(string fname)
 {

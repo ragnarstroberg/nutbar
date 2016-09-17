@@ -49,8 +49,10 @@ class TransitionDensity
   void SetAZcore(int a, int z){Acore=a;Zcore=z;};
   double OBTD(int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int m_index_a, int m_index_b, int Lambda2 );
   double TBTD(int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int m_index_a, int m_index_b, int m_index_c, int m_index_d, int J2ab, int J2cd, int Lambda2 );
+  arma::mat GetOneBodyTransitionOperator( string filename );
+  arma::mat GetTwoBodyTransitionOperator( string filename );
   arma::mat CalcOBTD( int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int Lambda2);
-  void CalcTBTD( int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int Lambda2);
+  arma::mat CalcTBTD( int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int Lambda2);
   void WriteEGV( string fname);
   void WriteTRDENS_input(string fname);
   void SetMaxStatesPerJ( int J2, int imax){ max_states_per_J[J2] = imax;};
