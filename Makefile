@@ -1,7 +1,7 @@
 
 CPP = g++
 
-FLAGS = -std=c++11
+FLAGS = -std=c++11 -fopenmp -O3
 INCLUDE = -I$(HOME)/include/armadillo
 LIBS = -lgsl -lopenblas
 

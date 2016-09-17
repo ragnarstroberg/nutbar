@@ -5,8 +5,9 @@
 #include <algorithm>
 #include <armadillo>
 
-
 #include "TransitionDensity.hh"
+
+#define SQRT2 1.4142135623730950488
 
 using namespace std;
 
@@ -288,9 +289,7 @@ void TransitionDensity::CalculateMschemeAmplitudes()
 
      int imax = nuvec.no_level;
      if ( max_states_per_J.find(nuvec.J2) != max_states_per_J.end() ) imax = min(imax,max_states_per_J[nuvec.J2]);
-//     vector<float> level_coefs(nuvec.no_level,0.0);
      vector<float> level_coefs(imax,0.0);
-//     for (int ilevel=0;ilevel<nuvec.no_level;++ilevel)
      for (int ilevel=0;ilevel<imax;++ilevel)
      {
        level_coefs[ilevel] = nuvec.coefT[ilevel][istate];
@@ -346,28 +345,11 @@ double TransitionDensity::OBTD(int J_index_i, int eigvec_i, int J_index_f, int e
   {
     m_index_a++;
     m_index_b++;
-//    cout << "    " << m_index_a << "  " << m_index_b << "   "
-//                   << m_orbits[m_index_a].j2 << "," << m_orbits[m_index_a].mj2 << "  "
-//                   << m_orbits[m_index_b].j2 << "," << m_orbits[m_index_b].mj2 << "  " << endl;
 
     // convention: tilded destruction operator b~(m) = (-1)**(jb + mb) b(-m)
     //                                         b(m)  = (-1)**(jb -mb) b~(-m)
     int phase_b = (1-(j2_b-im)%4);
     double clebsch = CG(j2_a,im,j2_b,-im,Lambda2,0) ;
-
-//      if (j2_a==1 and j2_b==1 and m_index_a==m_index_b)
-//      {
-//         cout << "OBTD(s1/s1) " << setw(3) << im << " " 
-//              << setw(8) << setprecision(5) << fixed  << clebsch << " "
-////              << setw(8) << setprecision(5) << fixed  << amp_i << " "
-////              << setw(8) << setprecision(5) << fixed  << amp_f << " "
-////              << setw(8) << setprecision(5) << fixed  << phase_ladder
-//              << setw(8) << setprecision(5) << fixed  << " "
-//              << setw(8) << setprecision(5) << fixed  << phase_b << "  "
-//             << endl;
-////              << setw(8) << setprecision(5) << fixed  << obd << endl;
-//      }
-
 
     for ( auto& it_amp : amplitudes )
     {
@@ -377,22 +359,14 @@ double TransitionDensity::OBTD(int J_index_i, int eigvec_i, int J_index_f, int e
       double amp_i = it_amp.second[J_index_i][eigvec_i];
       if (abs(amp_i)<1e-7) continue;
       auto new_key = key;
-//      cout << " amp_i = " << amp_i << endl;
-//      cout << "     key = " << key[0] << "  " << bitset<12>(new_key[0]) << " " << bitset<12>(new_key[0]>>12) << endl;
       new_key[0] &= ~( 0x1 << (m_index_a));
       new_key[0] |=  ( 0x1 << (m_index_b));
       if (amplitudes.find(new_key) == amplitudes.end() ) continue;
-//      cout << " new_key = " << new_key[0] << "  " << bitset<12>(new_key[0]) << " " << bitset<12>(new_key[0]>>12) << endl;
       int phase_ladder = 0;
       for (int iphase=min(m_index_a,m_index_b)+1;iphase<max(m_index_a,m_index_b);++iphase) phase_ladder += ( key[0] >>iphase )&0x1;
       phase_ladder = 1-2*(phase_ladder%2);
-//      phase_ladder = 1;
       double amp_f = amplitudes[new_key][J_index_f][eigvec_f];
-//      double clebsch = CG(j2_a,im,j2_b,-im,Lambda2,0) ;
       obd += clebsch * amp_i * amp_f * phase_ladder * phase_b;
-
-//      if (m_orbits[m_index_a].j2==3 and m_orbits[m_index_b].j2==3)
-//         cout << "obd = " << obd << endl;
     }
   }
   
@@ -404,12 +378,14 @@ double TransitionDensity::OBTD(int J_index_i, int eigvec_i, int J_index_f, int e
 
 
 
-// This does not work yet!!
 double TransitionDensity::TBTD(int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int m_index_a, int m_index_b, int m_index_c, int m_index_d, int J2ab, int J2cd, int Lambda2 )
 {
 
   int J2i = Jlist[J_index_i];
   int J2f = Jlist[J_index_f];
+  int mu = 0;
+  int Mi = 0;
+  int Mf = 0;
   
   int j2_a = m_orbits[m_index_a].j2;
   int j2_b = m_orbits[m_index_b].j2;
@@ -423,15 +399,14 @@ double TransitionDensity::TBTD(int J_index_i, int eigvec_i, int J_index_f, int e
   m_index_d += (j2_d - m_orbits[m_index_d].mj2)/2;
 
 
+  // check some triangle conditions
   if ((J2f+Lambda2 < J2i) or (abs(J2f-Lambda2)>J2i)) return 0;
   if ((j2_a+j2_b<J2ab) or (abs(j2_a-j2_b)>J2ab)) return 0;
   if ((j2_c+j2_d<J2cd) or (abs(j2_c-j2_d)>J2cd)) return 0;
   if ((J2ab+J2cd < Lambda2) or (abs(J2ab-J2cd)>Lambda2)) return 0;
   
-//  cout << "made it past traingle checks" << endl;
 
-
-  double clebsch_fi = CG(J2i,0,Lambda2,0,J2f,0);
+  double clebsch_fi = CG(J2i,Mi,Lambda2,mu,J2f,Mf);
   if (abs(clebsch_fi)<1e-9)
   {
      cout << "Warning got zero Clebsch while inverting the Wigner-Eckart theorem" << endl;
@@ -440,18 +415,23 @@ double TransitionDensity::TBTD(int J_index_i, int eigvec_i, int J_index_f, int e
 
   double tbd = 0;
   int Mab_max = min(J2ab,J2cd);
+
+  // Restricted sum a<=b c<=d gives 1/[(1+delta_ab)(1+delta_cd)], while
+  // using normalized TBMEs gives sqrt[ (1+delta_ab)(1+delta_cd) ].
+  // The additional factor of 2 comes from being able to limit ma < mb or mc < md
   double norm = 1;
-  if (m_index_a==m_index_b) norm *= sqrt(0.5);  // accounting for restricted sum and 1/4 out in front ?
-  if (m_index_c==m_index_d) norm *= sqrt(0.5);  // accounting for restricted sum and 1/4 out in front ?
+  if (m_index_a==m_index_b) norm *= SQRT2;  
+  if (m_index_c==m_index_d) norm *= SQRT2;  
 
   for (int Mab=-Mab_max;Mab<=Mab_max;Mab+=2)
   {
-    int Mcd = 0 - Mab;
+    int Mcd = mu - Mab;
     int phasecd = (1- abs(J2cd - Mcd)%4); // phase from getting rid of the tildes
-    double clebsch_abcd = CG(J2ab,Mab,J2cd,Mcd,Lambda2,0);
+    double clebsch_abcd = CG(J2ab,Mab,J2cd,Mcd,Lambda2,mu);
     if ( abs(clebsch_abcd)<1e-7) continue;
     int ma_min = max(-j2_a, Mab-j2_b);
     int ma_max = min(j2_a, Mab+j2_b);
+    if (m_index_a==m_index_b) ma_max = min(ma_max, Mab/2);
 
     for (int ma=ma_min;ma<=ma_max;ma+=2)
     {
@@ -461,25 +441,21 @@ double TransitionDensity::TBTD(int J_index_i, int eigvec_i, int J_index_f, int e
       int ia = m_index_a - ( j2_a -ma )/2;
       int ib = m_index_b - ( j2_b -mb )/2;
       if (ib==ia) continue;
-//      int md_min = max(-j2_d, -Mcd-j2_c);
-//      int md_max = min(j2_d, -Mcd+j2_c);
       int mc_min = max(-j2_c, Mab-j2_d);
       int mc_max = min(j2_c, Mab+j2_d);
-//      int mc_min = -j2_c;
-//      int mc_max = j2_c;
+      if (m_index_c == m_index_d) mc_max = min(j2_c, Mab/2);
 
-//      for (int md=md_min;md<=md_max;md+=2)
       for (int mc=mc_min;mc<=mc_max;mc+=2)
       {
-//        int mc = Mcd-md;
         int md = -Mcd-mc;
-//        double clebsch_cd = CG(j2_d,md, j2_c,mc, J2cd,Mab); // Mcd = -Mab, and another (-) comes from getting rid of the tildes
         double clebsch_cd = CG(j2_c,mc, j2_d, md, J2cd,-Mcd); // Mcd = -Mab, and another (-) comes from getting rid of the tildes
         if ( abs(clebsch_cd)<1e-7) continue;
         int ic = m_index_c - ( j2_c -mc )/2;
         int id = m_index_d - ( j2_d -md )/2;
         if (ic==id) continue;
-//        int phasecd = (1- (j2_c+j2_d - mc -md)%4); // phase from getting rid of the tildes
+
+        uint64_t mask_ab = ((0x1 << ia ) + (0x1 << ib) );
+        uint64_t mask_cd = ((0x1 << ic ) + (0x1 << id) );
 
         for (auto& it_amp : amplitudes )
         {
@@ -489,24 +465,22 @@ double TransitionDensity::TBTD(int J_index_i, int eigvec_i, int J_index_f, int e
 
           if (not(( (key[0] >> ic) & (key[0] >> id) )&0x1) ) continue;
           auto new_key = key;
-          new_key[0] &= (~( (0x1 << ic) + (0x1 << id))); // remove particles from c and then from d  (d-c-)
-          if (( (new_key[0] >> ia) | (new_key[0] >> ib) )&0x1 ) continue; // orbits are already occupied
+          new_key[0] &= (~ mask_cd); // remove particles from c and then from d  (d-c-)
+          if ( new_key[0] & mask_ab) continue;
+          new_key[0] |= mask_ab; // add particles to b and then to a  (a+b+)
+
+          auto amp_newkey = amplitudes.find(new_key);
+          if (amp_newkey == amplitudes.end() 
+            or amp_newkey->second.size() < J_index_f
+            or amp_newkey->second[J_index_f].size() < eigvec_f) continue;
+
+          double amp_f = amp_newkey->second[J_index_f][eigvec_f];
 
           // pick up a phase from commuting the ladder operators
-          int phase_ladder = 0;
-          for (int iphase = min(ic,id)+1;iphase<max(ic,id);++iphase) phase_ladder += ( key[0] >>iphase )&0x1;
-          if (id>ic) phase_ladder++;
-          for (int iphase = min(ia,ib)+1;iphase<max(ia,ib);++iphase) phase_ladder += ( new_key[0] >>iphase )&0x1;
-          if (ia>ib) phase_ladder++;
-          phase_ladder = 1-2*(phase_ladder%2);
+          int phase_ladder = (ia>ib xor id<ic) ? -1 : 1;
+          for (int iphase = min(ic,id)+1;iphase<max(ic,id);++iphase)  if(( key[0] >>iphase )&0x1) phase_ladder *=-1;
+          for (int iphase = min(ia,ib)+1;iphase<max(ia,ib);++iphase)  if(( new_key[0] >>iphase )&0x1) phase_ladder *=-1;
 
-          new_key[0] |= ( (0x1 << ia) + (0x1 << ib)); // add particles to b and then to a  (a+b+)
-
-          if (amplitudes.find(new_key) == amplitudes.end()) continue;
-          if (amplitudes[new_key].size() < J_index_f) continue;
-          if (amplitudes[new_key][J_index_f].size() < eigvec_f) continue;
-
-          double amp_f = amplitudes[new_key][J_index_f][eigvec_f];
           tbd += amp_i * amp_f * clebsch_abcd * clebsch_ab * clebsch_cd * phasecd * phase_ladder;
 
         }
@@ -514,7 +488,7 @@ double TransitionDensity::TBTD(int J_index_i, int eigvec_i, int J_index_f, int e
     }
   }
 
-  tbd *= sqrt((J2f+1.)/(Lambda2+1)) / clebsch_fi * norm;
+  tbd *= sqrt((J2f+1.)/(Lambda2+1.)) / clebsch_fi * norm;
   return tbd;
 
 }
@@ -553,14 +527,15 @@ arma::mat TransitionDensity::CalcOBTD( int J_index_i, int eigvec_i, int J_index_
 
 arma::mat TransitionDensity::CalcTBTD( int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int Lambda2)
 {
+  // make a list of m-scheme indices for the beginning of each j-shell
   vector<int> jorbits;
   for (size_t i=0;i<m_orbits.size();++i )
   {
     if (m_orbits[i].mj2 == -m_orbits[i].j2) jorbits.push_back(i);
   }
 
+  // generate all the two body states that are needed
   vector<int> ket_a, ket_b, ket_J;
-
   for (size_t a=0;a<jorbits.size();++a)
   {
     int ja = m_orbits[jorbits[a]].j2;
@@ -572,7 +547,6 @@ arma::mat TransitionDensity::CalcTBTD( int J_index_i, int eigvec_i, int J_index_
       for (int J2=Jmin;J2<=Jmax;J2+=2)
       {
         if (a==b and (J2%4)>0) continue;
-        cout << setw(3) << ket_a.size() << ": " << a << " " << b << " " << J2 << endl;
         ket_a.push_back(a);
         ket_b.push_back(b);
         ket_J.push_back(J2);
@@ -581,26 +555,27 @@ arma::mat TransitionDensity::CalcTBTD( int J_index_i, int eigvec_i, int J_index_
   }
 
   arma::mat tbtd(ket_J.size(), ket_J.size(), arma::fill::zeros);
+  #pragma omp parallel for
   for (size_t ibra=0;ibra<ket_J.size();++ibra)
   {
     int a = ket_a[ibra];
     int b = ket_b[ibra];
     int J2ab = ket_J[ibra];
-    for (size_t iket=0;iket<ket_J.size();++iket)
+    size_t iket_min = ((J_index_i == J_index_f) and (eigvec_i==eigvec_f)) ? ibra : 0;
+    for (size_t iket=iket_min;iket<ket_J.size();++iket)
     {
       int c = ket_a[iket];
       int d = ket_b[iket];
       int J2cd = ket_J[iket];
-      tbtd(ibra,iket) = TBTD(  J_index_i,  eigvec_i,  J_index_f,  eigvec_f,  jorbits[a], jorbits[b],  jorbits[c], jorbits[d],  J2ab,  J2cd,  Lambda2 );
-//      if (ibra==47 and iket==64)
-//      {
-//        cout << "!!!!!!! " << jorbits[a] << " " << jorbits[b] << " " << jorbits[c] << " " << jorbits[d] << " " << J2ab << " " << J2cd << " : " << tbtd(ibra,iket) << endl;
-//      }
-      if (abs(tbtd(ibra,iket))>1e-7)
-        cout << ibra << "  " << iket << "   " << tbtd(ibra,iket) << endl;
+      tbtd(ibra,iket) = TBTD(  J_index_i,  eigvec_i,  J_index_f,  eigvec_f,
+                               jorbits[a], jorbits[b],  jorbits[c], jorbits[d],
+                                                          J2ab,  J2cd,  Lambda2 );
+      if  ((J_index_i == J_index_f) and (eigvec_i==eigvec_f))
+      {
+        tbtd(iket,ibra) = tbtd(ibra,iket) * (1-abs(J2ab-J2cd)%4);
+      }
     }
   }
-  cout << "all done here" << endl;
   return tbtd;
 }
 
