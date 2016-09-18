@@ -15,8 +15,6 @@ using namespace std;
 
 
 
-
-
 class TransitionDensity
 {
  public:
@@ -43,7 +41,6 @@ class TransitionDensity
   void ReadInputFromFile(string filename);
   void ReadInputInteractive();
   void ReadFiles( );
-//  void ReadFiles( string spsfile, string abfile_base );
   void CalculateMschemeAmplitudes();
   void SetAZ(int a, int z){A=a;Z=z;};
   void SetAZcore(int a, int z){Acore=a;Zcore=z;};
@@ -51,6 +48,7 @@ class TransitionDensity
   double TBTD(int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int m_index_a, int m_index_b, int m_index_c, int m_index_d, int J2ab, int J2cd, int Lambda2 );
   arma::mat GetOneBodyTransitionOperator( string filename );
   arma::mat GetTwoBodyTransitionOperator( string filename );
+  void GetScalarTransitionOperator( string filename, arma::mat& Op1b, arma::mat& Op2b );
   arma::mat CalcOBTD( int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int Lambda2);
   arma::mat CalcTBTD( int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int Lambda2);
   void WriteEGV( string fname);

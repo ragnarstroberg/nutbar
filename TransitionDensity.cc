@@ -317,54 +317,61 @@ void TransitionDensity::CalculateMschemeAmplitudes()
 double TransitionDensity::OBTD(int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int m_index_a, int m_index_b, int Lambda2 )
 {
 
+//  cout << "==== " << m_index_a << "  " << m_index_b << " ====" << endl;
+//  cout << "===== " << m_orbits[m_index_a].tz2 << " " <<  m_orbits[m_index_a].tz2 << "====" << endl;
   int J2i = Jlist[J_index_i];
   int J2f = Jlist[J_index_f];
-  
-  int j2_a = m_orbits[m_index_a].j2;
-  int j2_b = m_orbits[m_index_b].j2;
 
   if ((J2i+Lambda2 < J2f) or (abs(J2i-Lambda2)>J2f)) return 0;
   
-  double clebsch_fi = CG(J2i,0,Lambda2,0,J2f,0);
+  int mu = 0;
+  int Mi = 0;
+  int Mf = 0;
+  double clebsch_fi = CG(J2i,Mi,Lambda2,mu,J2f,Mf);
   if (abs(clebsch_fi)<1e-9)
   {
      cout << "Warning got zero Clebsch while inverting the Wigner-Eckart theorem" << endl;
      return 0;
   }
+
+  int j2_a = m_orbits[m_index_a].j2;
+  int j2_b = m_orbits[m_index_b].j2;
+
+  m_index_a += (j2_a - m_orbits[m_index_a].mj2)/2;
+  m_index_b += (j2_b - m_orbits[m_index_b].mj2)/2;
+
   
   // find m-scheme orbits so that m_a = m_b, which will work for mu=0
   double obd = 0;
-  while ( m_orbits[m_index_a].mj2 < min(j2_a, m_orbits[m_index_b].mj2) ) m_index_a++;
-  while ( m_orbits[m_index_b].mj2 < min(j2_b, m_orbits[m_index_a].mj2) ) m_index_b++;
-  if (m_orbits[m_index_a].j2 != j2_a) return 0;
-  if (m_orbits[m_index_b].j2 != j2_b) return 0;
-  m_index_a--;
-  m_index_b--;
+  int ma_min = max(-j2_a,mu-j2_b);
+  int ma_max = min(j2_a,mu+j2_b);
 
-  for ( int im=-min(j2_a,j2_b);im<=min(j2_a,j2_b);im+=2)
+  for ( int ma=ma_min;ma<=ma_max;ma+=2)
   {
-    m_index_a++;
-    m_index_b++;
+    int mb = ma - mu;
+    int ia = m_index_a - ( j2_a -ma )/2;
+    int ib = m_index_b - ( j2_b -mb )/2;
 
     // convention: tilded destruction operator b~(m) = (-1)**(jb + mb) b(-m)
     //                                         b(m)  = (-1)**(jb -mb) b~(-m)
-    int phase_b = (1-(j2_b-im)%4);
-    double clebsch = CG(j2_a,im,j2_b,-im,Lambda2,0) ;
+    int phase_b = (1-(j2_b-mb)%4);
+    double clebsch = CG(j2_a,ma,j2_b,-mb,Lambda2,mu) ;
+    uint64_t mask_a = (0x1<<ia);
+    uint64_t mask_b = (0x1<<ib);
 
     for ( auto& it_amp : amplitudes )
     {
       auto& key = it_amp.first;
-      if ( not( (key[0] >> m_index_a)&0x1) ) continue;
-      if ( m_index_a != m_index_b and   ( (key[0] >> m_index_b)&0x1) ) continue;
+      if ( not( key[0] & mask_b )) continue;
+      if ( ia != ib and   ( key[0] & mask_a) ) continue;
       double amp_i = it_amp.second[J_index_i][eigvec_i];
       if (abs(amp_i)<1e-7) continue;
       auto new_key = key;
-      new_key[0] &= ~( 0x1 << (m_index_a));
-      new_key[0] |=  ( 0x1 << (m_index_b));
+      new_key[0] &= ~mask_b;  // remove orbit b
+      new_key[0] |=  mask_a;  // add to orbit a
       if (amplitudes.find(new_key) == amplitudes.end() ) continue;
-      int phase_ladder = 0;
-      for (int iphase=min(m_index_a,m_index_b)+1;iphase<max(m_index_a,m_index_b);++iphase) phase_ladder += ( key[0] >>iphase )&0x1;
-      phase_ladder = 1-2*(phase_ladder%2);
+      int phase_ladder = 1;
+      for (int iphase=min(ia,ib)+1;iphase<max(ia,ib);++iphase) if( (key[0] >>iphase )&0x1) phase_ladder *=-1;
       double amp_f = amplitudes[new_key][J_index_f][eigvec_f];
       obd += clebsch * amp_i * amp_f * phase_ladder * phase_b;
     }
@@ -508,14 +515,24 @@ arma::mat TransitionDensity::CalcOBTD( int J_index_i, int eigvec_i, int J_index_
 
   size_t njorb = jorbits.size();
   arma::mat obtd(njorb,njorb,arma::fill::zeros);
+//  cout << "begin 1b parallel loop" << endl;
+//  #pragma omp parallel for schedule(dynamic,1)
   for (size_t i=0; i<njorb; ++i)
   {
     int j2i = m_orbits[jorbits[i]].j2;
-    for (size_t j=0; j<njorb; ++j)
+    int jmin = 0;
+    if (J_index_i==J_index_f and eigvec_i==eigvec_f) jmin = i;
+    for (size_t j=jmin; j<njorb; ++j)
     {
       obtd(i,j) = OBTD( J_index_i, eigvec_i, J_index_f, eigvec_f, jorbits[i], jorbits[j], Lambda2);
+      if (J_index_i==J_index_f and eigvec_i==eigvec_f)
+      {
+        int j2j = m_orbits[jorbits[j]].j2;
+        obtd(j,i) = (1-(j2j-j2i)%4) * obtd(i,j);
+      }
     }
   }
+//  cout << "end 1b parallel loop" << endl;
 
   return obtd;
 
@@ -554,8 +571,9 @@ arma::mat TransitionDensity::CalcTBTD( int J_index_i, int eigvec_i, int J_index_
     }
   }
 
+  cout << "Start parallel loop" << endl;
   arma::mat tbtd(ket_J.size(), ket_J.size(), arma::fill::zeros);
-  #pragma omp parallel for
+  #pragma omp parallel for schedule(dynamic,1)
   for (size_t ibra=0;ibra<ket_J.size();++ibra)
   {
     int a = ket_a[ibra];
@@ -570,12 +588,14 @@ arma::mat TransitionDensity::CalcTBTD( int J_index_i, int eigvec_i, int J_index_
       tbtd(ibra,iket) = TBTD(  J_index_i,  eigvec_i,  J_index_f,  eigvec_f,
                                jorbits[a], jorbits[b],  jorbits[c], jorbits[d],
                                                           J2ab,  J2cd,  Lambda2 );
+
       if  ((J_index_i == J_index_f) and (eigvec_i==eigvec_f))
       {
         tbtd(iket,ibra) = tbtd(ibra,iket) * (1-abs(J2ab-J2cd)%4);
       }
     }
   }
+  cout << "end parallel loop" << endl;
   return tbtd;
 }
 
@@ -584,7 +604,7 @@ arma::mat TransitionDensity::GetOneBodyTransitionOperator( string filename)
 {
 
   ifstream opfile(filename);
-  string line,bufstring;
+  string line;
   int Rank_J, Rank_T, parity;
 
   while ( line.find("Rank_J") == string::npos)   getline(opfile, line);
@@ -649,7 +669,7 @@ arma::mat TransitionDensity::GetTwoBodyTransitionOperator( string filename)
 {
 
   ifstream opfile(filename);
-  string line,bufstring;
+  string line;
   int Rank_J, Rank_T, parity;
 
   while ( line.find("Rank_J") == string::npos)   getline(opfile, line);
@@ -737,22 +757,11 @@ arma::mat TransitionDensity::GetTwoBodyTransitionOperator( string filename)
       swap(c,d);
       Op_abcd *= -(1-abs(m_orbits[jorbits[c]].j2 + m_orbits[jorbits[d]].j2 - Jcd)%4);
     }
-//    if (a==b) Op_abcd *= 0.5; // since we only store a<=b, c<=d we get a factor 4/(1+delta_ab)(1_delta_cd)
-//    if (c==d) Op_abcd *= 0.5; // which combines with the 1/4 out in front
 
     size_t ibra=0,iket=0;
     while( ibra<ket_a.size() and not( (ket_a[ibra]==a) and (ket_b[ibra]==b) and ket_J[ibra]==Jab) ) ibra++;
     while( iket<ket_a.size() and not( (ket_a[iket]==c) and (ket_b[iket]==d) and ket_J[iket]==Jcd) ) iket++;
 
-    if (ibra==0 and iket==1)
-    {
-     cout << "aaaaa   " << a << " " << b << " " << c << " " << d << "  " << Jab << " " << Jcd << " "  << Op_abcd << endl;
-    }
-
-    if (a==3 and b==3 and c==3 and d==3 and Jab==0 and Jcd==4)
-    {
-      cout << "bbbb   " << a << " " << b << " " << c << " " << d << " " << Jab << " " << Jcd << " " << Op_abcd << "   " << ibra << " " << iket << endl;
-    }
 
     Op2b(ibra,iket) = Op_abcd;
     if (ibra!=iket)
@@ -764,8 +773,96 @@ arma::mat TransitionDensity::GetTwoBodyTransitionOperator( string filename)
 
 
 
+void TransitionDensity::GetScalarTransitionOperator( string filename, arma::mat& Op1b, arma::mat& Op2b)
+{
+
+  // make a list of m-scheme indices for the beginning of each j-shell
+  vector<int> jorbits;
+  for (size_t i=0;i<m_orbits.size();++i )
+  {
+    if (m_orbits[i].mj2 == -m_orbits[i].j2) jorbits.push_back(i);
+  }
+
+  // generate all the two body states that are needed
+  vector<int> ket_a, ket_b, ket_J;
+  for (size_t a=0;a<jorbits.size();++a)
+  {
+    int ja = m_orbits[jorbits[a]].j2;
+    for (size_t b=a; b<jorbits.size();++b)
+    {      
+      int jb = m_orbits[jorbits[b]].j2;
+      int Jmin = abs(ja-jb);
+      int Jmax = ja+jb;
+      for (int J2=Jmin;J2<=Jmax;J2+=2)
+      {
+        if (a==b and (J2%4)>0) continue;
+        ket_a.push_back(a);
+        ket_b.push_back(b);
+        ket_J.push_back(J2);
+      }
+    }
+  }
+  Op1b.set_size( jorbits.size(), jorbits.size() );
+  Op2b.set_size( ket_a.size(), ket_a.size() );
+  Op1b.zeros();
+  Op2b.zeros();
+  
+  ifstream opfile(filename);
+  string line = "!";
+
+  int dummy;
+
+  while (line.find("!") != string::npos)   getline(opfile,line);
+
+  istringstream iss( line );
+  iss >> dummy;
+  for (size_t i=0; i<jorbits.size(); ++i)
+  {
+     iss >> Op1b(i,i);
+     Op1b(i,i) *= sqrt( m_orbits[jorbits[i]].j2 + 1); // convert to a reduced matrix element
+  }
 
 
+  int a,b,c,d,J,T;
+  double ME;
+  while( opfile >> a >> b >> c >> d >> J >> T >> ME )
+  {
+    a--;b--;c--;d--;
+    auto& oa = m_orbits[jorbits[a]];
+    auto& ob = m_orbits[jorbits[b]];
+    auto& oc = m_orbits[jorbits[c]];
+    auto& od = m_orbits[jorbits[d]];
+    if (a>b)
+    {
+      ME *= -(1-abs(oa.j2 + ob.j2 -J*2 )%4);
+      swap(a,b);
+    }
+    if (c>d)
+    {
+      ME *= -(1-abs(oc.j2 + od.j2 -J*2 )%4);
+      swap(c,d);
+    }
+    ME *= sqrt(2*J+1.); // Scalar ME's are stored as not-reduced. This converts them to reduced.
+
+    if ( oa.tz2 != ob.tz2 )
+    {
+      if ( not (oa.n==ob.n and oa.l2==ob.l2 and oa.j2==ob.j2) )  ME /= SQRT2; // pn matrix elements are not normalized
+      if ( not (oc.n==od.n and oc.l2==od.l2 and oc.j2==od.j2) )  ME /= SQRT2; // pn matrix elements are not normalized
+    }
+
+    size_t ibra=0,iket=0;
+    while( ibra<ket_a.size() and not( (ket_a[ibra]==a) and (ket_b[ibra]==b) and ket_J[ibra]==2*J) ) ibra++;
+    while( iket<ket_a.size() and not( (ket_a[iket]==c) and (ket_b[iket]==d) and ket_J[iket]==2*J) ) iket++;
+
+    Op2b(ibra,iket)  += ME ; 
+    Op2b(iket,ibra) = Op2b(ibra,iket);
+  }
+
+}
+
+
+// Write out the eigenvectors in the Darmstadt MBPT/NCSM format
+// so it can be read in by Petr Navratil's TRDENS code
 void TransitionDensity::WriteEGV(string fname)
 {
 
