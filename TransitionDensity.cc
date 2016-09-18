@@ -359,6 +359,7 @@ double TransitionDensity::OBTD(int J_index_i, int eigvec_i, int J_index_f, int e
     uint64_t mask_a = (0x1<<ia);
     uint64_t mask_b = (0x1<<ib);
 
+
     for ( auto& it_amp : amplitudes )
     {
       auto& key = it_amp.first;
@@ -374,6 +375,7 @@ double TransitionDensity::OBTD(int J_index_i, int eigvec_i, int J_index_f, int e
       for (int iphase=min(ia,ib)+1;iphase<max(ia,ib);++iphase) if( (key[0] >>iphase )&0x1) phase_ladder *=-1;
       double amp_f = amplitudes[new_key][J_index_f][eigvec_f];
       obd += clebsch * amp_i * amp_f * phase_ladder * phase_b;
+ 
     }
   }
   
@@ -528,7 +530,7 @@ arma::mat TransitionDensity::CalcOBTD( int J_index_i, int eigvec_i, int J_index_
       if (J_index_i==J_index_f and eigvec_i==eigvec_f)
       {
         int j2j = m_orbits[jorbits[j]].j2;
-        obtd(j,i) = (1-(j2j-j2i)%4) * obtd(i,j);
+        obtd(j,i) = (1-abs(j2j-j2i)%4) * obtd(i,j);
       }
     }
   }
@@ -648,15 +650,13 @@ arma::mat TransitionDensity::GetOneBodyTransitionOperator( string filename)
   getline(opfile, line); // skip final header
   int a,b;
   double Op_ab;
-  while ( opfile.good() )
+  while ( opfile >> a >> b >> Op_ab)
   {
-    opfile >> a >> b >> Op_ab;
     a = orbits_in[a-1]; // fortran indexing...
     b = orbits_in[b-1];
     int j2a = m_orbits[jorbits[a]].j2;
     int j2b = m_orbits[jorbits[b]].j2;
     Op1b(a,b) = Op_ab;
-//    Op1b(b,a) = (1 - abs( m_orbits[jorbits[a]].j2 - m_orbits[jorbits[b]].j2 )%4) * Op_ab; // phase factor (-1)^(ja-jb)
     Op1b(b,a) = (1 - abs(j2a-j2b)%4) * Op_ab; // phase factor (-1)^(ja-jb)
   }
 
