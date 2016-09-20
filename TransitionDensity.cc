@@ -318,8 +318,8 @@ double TransitionDensity::OBTD(int J_index_i, int eigvec_i, int J_index_f, int e
   if ((J2i+Lambda2 < J2f) or (abs(J2i-Lambda2)>J2f)) return 0;
   
   int mu = 0;
-  int Mi = 0;
-  int Mf = 0;
+  int Mi = J2i%2;
+  int Mf = J2f%2;
   double clebsch_fi = CG(J2i,Mi,Lambda2,mu,J2f,Mf);
   if (abs(clebsch_fi)<1e-9)
   {
