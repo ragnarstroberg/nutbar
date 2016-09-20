@@ -24,6 +24,7 @@ class TransitionDensity
   size_t total_number_levels;
   vector<vector<float>> blank_vector;
   vector<MschemeOrbit> m_orbits;
+  vector<int> jorbits;
   vector<int> Jlist;
   int MJtot;
   int Nshell;
@@ -46,8 +47,8 @@ class TransitionDensity
   void SetAZcore(int a, int z){Acore=a;Zcore=z;};
   double OBTD(int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int m_index_a, int m_index_b, int Lambda2 );
   double TBTD(int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int m_index_a, int m_index_b, int m_index_c, int m_index_d, int J2ab, int J2cd, int Lambda2 );
-  arma::mat GetOneBodyTransitionOperator( string filename );
-  arma::mat GetTwoBodyTransitionOperator( string filename );
+  arma::mat GetOneBodyTransitionOperator( string filename, int& Lambda, int& RankT, int& parity );
+  arma::mat GetTwoBodyTransitionOperator( string filename, int& Lambda, int& RankT, int& parity );
   void GetScalarTransitionOperator( string filename, arma::mat& Op1b, arma::mat& Op2b );
   arma::mat CalcOBTD( int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int Lambda2);
   arma::mat CalcTBTD( int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int Lambda2);

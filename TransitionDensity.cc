@@ -60,8 +60,6 @@ void TransitionDensity::ReadInputInteractive()
 
   cout << "sps_file_name = " << sps_file_name << endl;
 
-
-
   istringstream iss;
   string line;
 
@@ -73,10 +71,6 @@ void TransitionDensity::ReadInputInteractive()
   iss.str(line);
   int j;
   while( iss >> j ) Jlist.push_back(j);
-
-//  cout << "J values: ";
-//  for (auto j : Jlist) cout << j << " ";
-//  cout << endl;
 
 
   cout << "Number of eigenstates for each J (separated by space, or single value if same for all J): ";
@@ -111,19 +105,18 @@ void TransitionDensity::ReadInputFromFile(string filename)
   ifstream infile(filename);
   istringstream iss;
 
-  const int BUFFERSIZE = 500;
-  char line[BUFFERSIZE];
+  string line;
 
 
   // basename for *.nba *.prj and *.xvc files
-  infile.getline(line, BUFFERSIZE);
+  getline(infile,line);
   iss.str(line);
   iss >> basename;
 
   cout << "basename = " << basename << endl;
 
   // basename for *.nba *.prj and *.xvc files
-  infile.getline(line, BUFFERSIZE);
+  getline(infile,line);
   iss.clear();
   iss.str(line);
   iss >> sps_file_name;
@@ -132,7 +125,7 @@ void TransitionDensity::ReadInputFromFile(string filename)
 
 
   // list of 2*J values
-  infile.getline(line, BUFFERSIZE);
+  getline(infile,line);
   iss.clear();
   iss.str(line);
   int j;
@@ -143,7 +136,7 @@ void TransitionDensity::ReadInputFromFile(string filename)
   cout << endl;
 
   // number of states to treat for each J
-  infile.getline(line, BUFFERSIZE);
+  getline(infile,line);
   iss.clear();
   iss.str(line);
   vector<int> spj;
@@ -153,9 +146,6 @@ void TransitionDensity::ReadInputFromFile(string filename)
     if (spj.size() < Jlist.size()) max_states_per_J[ Jlist[i] ] = spj[0];
     else                           max_states_per_J[ Jlist[i] ] = spj[i];
   }
-
-
-
 
 }
 
@@ -176,8 +166,8 @@ void TransitionDensity::ReadFiles( )
 
   int nvalence_protons = Z - Zcore;
   int nvalence_neutrons = A-Z - (Acore-Zcore);
-  for ( auto j : Jlist ) cout << j << " ";
-  cout << endl;
+//  for ( auto j : Jlist ) cout << j << " ";
+//  cout << endl;
   MJtot = (*min_element(begin(Jlist),end(Jlist)))%2;
 
   for (auto j : Jlist )
@@ -255,6 +245,13 @@ void TransitionDensity::ReadFiles( )
   }
 
   m_orbits = jbasis_list[0].nubasis_a.m_orbits;
+  jorbits.clear();
+  for (size_t i=0;i<m_orbits.size();++i )
+  {
+    if (m_orbits[i].mj2 == -m_orbits[i].j2) jorbits.push_back(i);
+  }
+  
+
   Nshell=0;
   for (auto morbit : m_orbits)
   {
@@ -286,7 +283,6 @@ void TransitionDensity::CalculateMschemeAmplitudes()
    // loop over J-coupled basis states
    for (int istate=0;istate<nuvec.no_state;++istate)
    {
-
      int imax = nuvec.no_level;
      if ( max_states_per_J.find(nuvec.J2) != max_states_per_J.end() ) imax = min(imax,max_states_per_J[nuvec.J2]);
      vector<float> level_coefs(imax,0.0);
@@ -310,15 +306,12 @@ void TransitionDensity::CalculateMschemeAmplitudes()
      }
    }
   }
-
 }
 
 
 double TransitionDensity::OBTD(int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int m_index_a, int m_index_b, int Lambda2 )
 {
 
-//  cout << "==== " << m_index_a << "  " << m_index_b << " ====" << endl;
-//  cout << "===== " << m_orbits[m_index_a].tz2 << " " <<  m_orbits[m_index_a].tz2 << "====" << endl;
   int J2i = Jlist[J_index_i];
   int J2f = Jlist[J_index_f];
 
@@ -375,7 +368,6 @@ double TransitionDensity::OBTD(int J_index_i, int eigvec_i, int J_index_f, int e
       for (int iphase=min(ia,ib)+1;iphase<max(ia,ib);++iphase) if( (key[0] >>iphase )&0x1) phase_ladder *=-1;
       double amp_f = amplitudes[new_key][J_index_f][eigvec_f];
       obd += clebsch * amp_i * amp_f * phase_ladder * phase_b;
- 
     }
   }
   
@@ -506,14 +498,14 @@ double TransitionDensity::TBTD(int J_index_i, int eigvec_i, int J_index_f, int e
 
 arma::mat TransitionDensity::CalcOBTD( int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int Lambda2)
 {
-  vector<int> jorbits;
-  for (size_t i=0;i<m_orbits.size();++i )
-  {
-    if (m_orbits[i].mj2 == -m_orbits[i].j2) jorbits.push_back(i);
-  }
+//  vector<int> jorbits;
+//  for (size_t i=0;i<m_orbits.size();++i )
+//  {
+//    if (m_orbits[i].mj2 == -m_orbits[i].j2) jorbits.push_back(i);
+//  }
 
-  cout << "Initial state J2 = " << nuvec_list[J_index_i].J2 << "   E = " << nuvec_list[J_index_i].alpha[eigvec_i] << endl;
-  cout << "  Final state J2 = " << nuvec_list[J_index_f].J2 << "   E = " << nuvec_list[J_index_f].alpha[eigvec_f] << endl;
+//  cout << "Initial state J2 = " << nuvec_list[J_index_i].J2 << "   E = " << nuvec_list[J_index_i].alpha[eigvec_i] << endl;
+//  cout << "  Final state J2 = " << nuvec_list[J_index_f].J2 << "   E = " << nuvec_list[J_index_f].alpha[eigvec_f] << endl;
 
   size_t njorb = jorbits.size();
   arma::mat obtd(njorb,njorb,arma::fill::zeros);
@@ -547,11 +539,11 @@ arma::mat TransitionDensity::CalcOBTD( int J_index_i, int eigvec_i, int J_index_
 arma::mat TransitionDensity::CalcTBTD( int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int Lambda2)
 {
   // make a list of m-scheme indices for the beginning of each j-shell
-  vector<int> jorbits;
-  for (size_t i=0;i<m_orbits.size();++i )
-  {
-    if (m_orbits[i].mj2 == -m_orbits[i].j2) jorbits.push_back(i);
-  }
+//  vector<int> jorbits;
+//  for (size_t i=0;i<m_orbits.size();++i )
+//  {
+//    if (m_orbits[i].mj2 == -m_orbits[i].j2) jorbits.push_back(i);
+//  }
 
   // generate all the two body states that are needed
   vector<int> ket_a, ket_b, ket_J;
@@ -573,8 +565,11 @@ arma::mat TransitionDensity::CalcTBTD( int J_index_i, int eigvec_i, int J_index_
     }
   }
 
-  cout << "Start parallel loop" << endl;
   arma::mat tbtd(ket_J.size(), ket_J.size(), arma::fill::zeros);
+  int Ji = Jlist[J_index_i];
+  int Jf = Jlist[J_index_f];
+  if (abs(Ji-Jf)>Lambda2 or Ji+Jf<Lambda2) return tbtd;
+
   #pragma omp parallel for schedule(dynamic,1)
   for (size_t ibra=0;ibra<ket_J.size();++ibra)
   {
@@ -591,23 +586,22 @@ arma::mat TransitionDensity::CalcTBTD( int J_index_i, int eigvec_i, int J_index_
                                jorbits[a], jorbits[b],  jorbits[c], jorbits[d],
                                                           J2ab,  J2cd,  Lambda2 );
 
+      // if final == initial, only calculate half of the matrix
       if  ((J_index_i == J_index_f) and (eigvec_i==eigvec_f))
       {
-        tbtd(iket,ibra) = tbtd(ibra,iket) * (1-abs(J2ab-J2cd)%4);
+        tbtd(iket,ibra) = tbtd(ibra,iket) * (1-abs(J2ab-J2cd)%4); 
       }
     }
   }
-  cout << "end parallel loop" << endl;
   return tbtd;
 }
 
 
-arma::mat TransitionDensity::GetOneBodyTransitionOperator( string filename)
+arma::mat TransitionDensity::GetOneBodyTransitionOperator( string filename, int& Rank_J, int& Rank_T, int& parity )
 {
 
   ifstream opfile(filename);
   string line;
-  int Rank_J, Rank_T, parity;
 
   while ( line.find("Rank_J") == string::npos)   getline(opfile, line);
   istringstream( line.substr( line.rfind(":")+1 ) ) >> Rank_J;
@@ -616,11 +610,11 @@ arma::mat TransitionDensity::GetOneBodyTransitionOperator( string filename)
   while ( line.find("Parity") == string::npos)   getline(opfile, line);
   istringstream( line.substr( line.rfind(":")+1 ) ) >> parity;
 
-  vector<int> jorbits;
-  for (size_t i=0;i<m_orbits.size();i+= m_orbits[i].j2+1)
-  {
-    if (m_orbits[i].mj2 == -m_orbits[i].j2) jorbits.push_back(i);
-  }
+//  vector<int> jorbits;
+//  for (size_t i=0;i<m_orbits.size();i+= m_orbits[i].j2+1)
+//  {
+//    if (m_orbits[i].mj2 == -m_orbits[i].j2) jorbits.push_back(i);
+//  }
 
   while ( line.find("index") == string::npos)   getline(opfile, line);
   vector<int> orbits_in;
@@ -635,7 +629,7 @@ arma::mat TransitionDensity::GetOneBodyTransitionOperator( string filename)
       if (    m_orbits[jorbits[i]].n==n  and m_orbits[jorbits[i]].l2==2*l and m_orbits[jorbits[i]].j2==j2 and m_orbits[jorbits[i]].tz2==-tz2)
       {
          orbits_in.push_back(i);
-         cout << orbits_in.size() << " :  " << i << "  " << jorbits[i] << "  " << n << " " << l << " " << j2 << " " << tz2 << endl;
+//         cout << orbits_in.size() << " :  " << i << "  " << jorbits[i] << "  " << n << " " << l << " " << j2 << " " << tz2 << endl;
       }
     }
 
@@ -643,7 +637,7 @@ arma::mat TransitionDensity::GetOneBodyTransitionOperator( string filename)
   }
 
 
-  for (size_t i=0;i<orbits_in.size();++i) cout << i << " :  " << orbits_in[i] << endl;
+//  for (size_t i=0;i<orbits_in.size();++i) cout << i << " :  " << orbits_in[i] << endl;
 
   arma::mat Op1b(jorbits.size(),jorbits.size(),arma::fill::zeros);
 
@@ -665,12 +659,11 @@ arma::mat TransitionDensity::GetOneBodyTransitionOperator( string filename)
 
 
 
-arma::mat TransitionDensity::GetTwoBodyTransitionOperator( string filename)
+arma::mat TransitionDensity::GetTwoBodyTransitionOperator( string filename , int& Rank_J, int& Rank_T, int& parity)
 {
 
   ifstream opfile(filename);
   string line;
-  int Rank_J, Rank_T, parity;
 
   while ( line.find("Rank_J") == string::npos)   getline(opfile, line);
   istringstream( line.substr( line.rfind(":")+1 ) ) >> Rank_J;
@@ -680,11 +673,11 @@ arma::mat TransitionDensity::GetTwoBodyTransitionOperator( string filename)
   istringstream( line.substr( line.rfind(":")+1 ) ) >> parity;
 
   // set up the j scheme basis from the m scheme basis
-  vector<int> jorbits;
-  for (size_t i=0;i<m_orbits.size();i+= m_orbits[i].j2+1)
-  {
-    if (m_orbits[i].mj2 == -m_orbits[i].j2) jorbits.push_back(i);
-  }
+//  vector<int> jorbits;
+//  for (size_t i=0;i<m_orbits.size();i+= m_orbits[i].j2+1)
+//  {
+//    if (m_orbits[i].mj2 == -m_orbits[i].j2) jorbits.push_back(i);
+//  }
 
   // Read in the single particle basis used in the file
   while ( line.find("index") == string::npos)   getline(opfile, line);
@@ -706,9 +699,9 @@ arma::mat TransitionDensity::GetTwoBodyTransitionOperator( string filename)
     getline(opfile, line);
   }
 
-  cout << "------------------------------------" << endl;
+//  cout << "------------------------------------" << endl;
 
-  for (size_t i=0;i<orbits_in.size();++i) cout << i << " :  " << orbits_in[i] << endl;
+//  for (size_t i=0;i<orbits_in.size();++i) cout << i << " :  " << orbits_in[i] << endl;
 
 
   vector<int> ket_a, ket_b, ket_J;
@@ -738,7 +731,6 @@ arma::mat TransitionDensity::GetTwoBodyTransitionOperator( string filename)
     getline(opfile, line); // skip final header
   int a,b,c,d,Jab,Jcd;
   double Op_abcd;
-  cout << "line before reading matrix elements: " << line << endl;
   while ( opfile >> a >> b >> c >> d >> Jab >> Jcd >> Op_abcd )
   {
     a = orbits_in[a-1]; // fortran indexing...
@@ -777,11 +769,11 @@ void TransitionDensity::GetScalarTransitionOperator( string filename, arma::mat&
 {
 
   // make a list of m-scheme indices for the beginning of each j-shell
-  vector<int> jorbits;
-  for (size_t i=0;i<m_orbits.size();++i )
-  {
-    if (m_orbits[i].mj2 == -m_orbits[i].j2) jorbits.push_back(i);
-  }
+//  vector<int> jorbits;
+//  for (size_t i=0;i<m_orbits.size();++i )
+//  {
+//    if (m_orbits[i].mj2 == -m_orbits[i].j2) jorbits.push_back(i);
+//  }
 
   // generate all the two body states that are needed
   vector<int> ket_a, ket_b, ket_J;
@@ -808,6 +800,13 @@ void TransitionDensity::GetScalarTransitionOperator( string filename, arma::mat&
   Op2b.zeros();
   
   ifstream opfile(filename);
+  if (! opfile.good() )
+  {
+    cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
+    cout << "!!! ERROR: Trouble reading " << filename << endl;
+    cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
+    return;
+  }
   string line = "!";
 
   int dummy;
@@ -822,6 +821,7 @@ void TransitionDensity::GetScalarTransitionOperator( string filename, arma::mat&
      Op1b(i,i) *= sqrt( m_orbits[jorbits[i]].j2 + 1); // convert to a reduced matrix element
   }
 
+//  cout << Op1b << endl;
 
   int a,b,c,d,J,T;
   double ME;

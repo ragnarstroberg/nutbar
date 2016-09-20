@@ -38,8 +38,9 @@ trans.WriteEGV("mbpt.egv");
 trans.WriteTRDENS_input("trdens.in");
 
 cout << "about to read transition operator" << endl;
-arma::mat Op1b = trans.GetOneBodyTransitionOperator("testfiles/IMSRG_E2_1b.op");
-arma::mat Op2b = trans.GetTwoBodyTransitionOperator("testfiles/IMSRG_E2_2b.op");
+int Lambda,RankT,parity;
+arma::mat Op1b = trans.GetOneBodyTransitionOperator("testfiles/IMSRG_E2_1b.op", Lambda,RankT,parity);
+arma::mat Op2b = trans.GetTwoBodyTransitionOperator("testfiles/IMSRG_E2_2b.op", Lambda,RankT,parity);
 cout << "Op1b " << endl << Op1b << endl;
 
 //cout << "obtd:" << endl << trans.CalcOBTD(0,0,0,0,0) << endl;
