@@ -106,7 +106,7 @@ int main(int argc, char** argv)
   arma::mat TensorOp1b;
   arma::mat TensorOp2b;
 
-  int Lambda,RankT,parity;
+  int Lambda=0,RankT=0,parity=0;
   if (settings.tensor_op_files.size() > 0)
   {
     cout << "one body op: " << settings.tensor_op_files[0] << endl;
@@ -153,6 +153,7 @@ int main(int argc, char** argv)
     cout << "Jf,Ji = " << settings.J2_f[Jf]*0.5 << " " << settings.J2_i[Ji]*0.5 << endl;
     TensorME1(Jf,Ji).zeros(settings.NJ_f[Jf],settings.NJ_i[Ji]);
     TensorME2(Jf,Ji).zeros(settings.NJ_f[Jf],settings.NJ_i[Ji]);
+    if ( abs(settings.J2_i[Ji] - settings.J2_f[Jf])> 2*Lambda) continue;
     if (Jf==Ji)
     {
       for (size_t isc=0; isc<OpScalar1b.size();++isc)
@@ -168,12 +169,19 @@ int main(int argc, char** argv)
       if (Ji==Jf and fvec>ivec) continue;
 //      cout << Ji << " " << ivec << " ->  " << Jf << " " << fvec << endl;
       arma::mat obtd,tbtd;
-      obtd = trans.CalcOBTD(Ji,ivec,Jf,fvec,Lambda*2);
-      tbtd = trans.CalcTBTD(Ji,ivec,Jf,fvec,Lambda*2);
-      double obme = arma::accu( TensorOp1b % obtd );
-      double tbme = arma::accu( TensorOp2b % tbtd);
-      TensorME1(Jf,Ji)(fvec,ivec) = obme;
-      TensorME2(Jf,Ji)(fvec,ivec) = tbme;
+      if (settings.tensor_op_files.size()>0)
+      {
+        obtd = trans.CalcOBTD(Ji,ivec,Jf,fvec,Lambda*2);
+        double obme = arma::accu( TensorOp1b % obtd );
+        TensorME1(Jf,Ji)(fvec,ivec) = obme;
+      }
+      
+      if (settings.tensor_op_files.size()>1)
+      {
+        tbtd = trans.CalcTBTD(Ji,ivec,Jf,fvec,Lambda*2);
+        double tbme = arma::accu( TensorOp2b % tbtd);
+        TensorME2(Jf,Ji)(fvec,ivec) = tbme;
+      }
 //      cout << "obtd" << endl << obtd << endl;
 //      cout << "<Op1b>" << obme << endl;
 //      cout << "<Op2b>" << tbme << endl;
@@ -212,42 +220,45 @@ int main(int argc, char** argv)
   }
 
   ostringstream oss;
-  oss << Lambda;
-  string filename = "nutbar_tensor" + oss.str() + "_" + settings.basename_vectors_f.substr( settings.basename_vectors_f.find_last_of("/")+1 );
-  if (settings.basename_vectors_i != settings.basename_vectors_f)
+  if ( settings.tensor_op_files.size()>0)
   {
-     filename +  "_" + settings.basename_vectors_i.substr( settings.basename_vectors_i.find_last_of("/")+1 );
-  }
-  filename += ".dat";
-  ofstream tensor_out(filename);
-
-  tensor_out << "##########################################################################################" << endl;
-  tensor_out << "# initial vector basename: " << settings.basename_vectors_i << endl;
-  tensor_out << "# final   vector basename: " << settings.basename_vectors_f << endl;
-  tensor_out << "# One body file: " << settings.tensor_op_files[0] << endl;
-  tensor_out << "# Two body file: " << settings.tensor_op_files[1] << endl;
-  tensor_out << "# Jf  nJf     Ji  nJi      Ei          Ef         <Op1b>          <Op2b>         <Op1b+2b> " << endl;
-  tensor_out << "###########################################################################################" << endl;
-
-  for (size_t indexJf=0; indexJf<settings.J2_f.size();++indexJf)
-  {
-    double Jf = settings.J2_f[indexJf]*0.5;
-    for (size_t njf=0; njf<settings.NJ_f[indexJf];++njf)
+    oss << Lambda;
+    string filename = "nutbar_tensor" + oss.str() + "_" + settings.basename_vectors_f.substr( settings.basename_vectors_f.find_last_of("/")+1 );
+    if (settings.basename_vectors_i != settings.basename_vectors_f)
     {
-      for (size_t indexJi=0; indexJi<settings.J2_i.size();++indexJi)
+       filename +  "_" + settings.basename_vectors_i.substr( settings.basename_vectors_i.find_last_of("/")+1 );
+    }
+    filename += ".dat";
+    ofstream tensor_out(filename);
+  
+    tensor_out << "##########################################################################################" << endl;
+    tensor_out << "# initial vector basename: " << settings.basename_vectors_i << endl;
+    tensor_out << "# final   vector basename: " << settings.basename_vectors_f << endl;
+    tensor_out << "# One body file: " << settings.tensor_op_files[0] << endl;
+    tensor_out << "# Two body file: " << settings.tensor_op_files[1] << endl;
+    tensor_out << "# Jf  nJf     Ji  nJi      Ei          Ef         <Op1b>          <Op2b>         <Op1b+2b> " << endl;
+    tensor_out << "###########################################################################################" << endl;
+  
+    for (size_t indexJf=0; indexJf<settings.J2_f.size();++indexJf)
+    {
+      double Jf = settings.J2_f[indexJf]*0.5;
+      for (size_t njf=0; njf<settings.NJ_f[indexJf];++njf)
       {
-       double Ji = settings.J2_i[indexJi]*0.5;
-       for (size_t nji=0; nji<settings.NJ_i[indexJi];++nji)
-       {
-         tensor_out << fixed << setw(4) << setprecision(1) << Jf << " " << setw(3) << njf+1 << "    "
-                    << fixed << setw(4) << setprecision(1) << Ji << " " << setw(3) << nji+1 << " "
-                    << fixed << setw(10) << setprecision(3) << trans.nuvec_list[indexJf].alpha[njf] << "  "
-                    << fixed << setw(10) << setprecision(3) << trans.nuvec_list[indexJi].alpha[nji] << "  "
-                    << scientific << setw(14) << setprecision(6) << TensorME1(indexJf,indexJi)(njf,nji) << "  "
-                    << scientific << setw(14) << setprecision(6) << TensorME2(indexJf,indexJi)(njf,nji) << "  "
-                    << scientific << setw(14) << setprecision(6) << TensorME1(indexJf,indexJi)(njf,nji) + TensorME2(indexJf,indexJi)(njf,nji) << "  "
-                    << endl;
-       }
+        for (size_t indexJi=0; indexJi<settings.J2_i.size();++indexJi)
+        {
+         double Ji = settings.J2_i[indexJi]*0.5;
+         for (size_t nji=0; nji<settings.NJ_i[indexJi];++nji)
+         {
+           tensor_out << fixed << setw(4) << setprecision(1) << Jf << " " << setw(3) << njf+1 << "    "
+                      << fixed << setw(4) << setprecision(1) << Ji << " " << setw(3) << nji+1 << " "
+                      << fixed << setw(10) << setprecision(3) << trans.nuvec_list[indexJf].alpha[njf] << "  "
+                      << fixed << setw(10) << setprecision(3) << trans.nuvec_list[indexJi].alpha[nji] << "  "
+                      << scientific << setw(14) << setprecision(6) << TensorME1(indexJf,indexJi)(njf,nji) << "  "
+                      << scientific << setw(14) << setprecision(6) << TensorME2(indexJf,indexJi)(njf,nji) << "  "
+                      << scientific << setw(14) << setprecision(6) << TensorME1(indexJf,indexJi)(njf,nji) + TensorME2(indexJf,indexJi)(njf,nji) << "  "
+                      << endl;
+         }
+        }
       }
     }
   }
@@ -268,7 +279,7 @@ int main(int argc, char** argv)
     scalar_out << "##########################################################################################" << endl;
     scalar_out << "# initial vector basename: " << settings.basename_vectors_i << endl;
     scalar_out << "# final   vector basename: " << settings.basename_vectors_f << endl;
-    scalar_out << "# Operator file: " << settings.tensor_op_files[0] << endl;
+    scalar_out << "# Operator file: " << settings.scalar_op_files[isc] << endl;
     scalar_out << "# Jf  nJf     Ji  nJi      Ei          Ef         <Op1b>          <Op2b>         <Op1b+2b> " << endl;
     scalar_out << "###########################################################################################" << endl;
   

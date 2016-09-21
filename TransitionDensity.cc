@@ -324,6 +324,7 @@ double TransitionDensity::OBTD(int J_index_i, int eigvec_i, int J_index_f, int e
   if (abs(clebsch_fi)<1e-9)
   {
      cout << "Warning got zero Clebsch while inverting the Wigner-Eckart theorem" << endl;
+     cout << "J2i=" << J2i << " M2f=" << Mf << " Lambda2=" << Lambda2 << " mu=" << mu << " J2f=" << J2f << " M2f=" << Mf << endl;
      return 0;
   }
 
@@ -385,8 +386,8 @@ double TransitionDensity::TBTD(int J_index_i, int eigvec_i, int J_index_f, int e
   int J2i = Jlist[J_index_i];
   int J2f = Jlist[J_index_f];
   int mu = 0;
-  int Mi = 0;
-  int Mf = 0;
+  int Mi = J2i%2;
+  int Mf = J2f%2;
   
   int j2_a = m_orbits[m_index_a].j2;
   int j2_b = m_orbits[m_index_b].j2;
@@ -411,6 +412,7 @@ double TransitionDensity::TBTD(int J_index_i, int eigvec_i, int J_index_f, int e
   if (abs(clebsch_fi)<1e-9)
   {
      cout << "Warning got zero Clebsch while inverting the Wigner-Eckart theorem" << endl;
+     cout << "J2i=" << J2i << " M2f=" << Mf << " Lambda2=" << Lambda2 << " mu=" << mu << " J2f=" << J2f << " M2f=" << Mf << endl;
      return 0;
   }
 
