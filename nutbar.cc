@@ -127,6 +127,7 @@ int main(int argc, char** argv)
   
   
   
+  vector<double> OpScalar0b(settings.scalar_op_files.size());
   vector<arma::mat> OpScalar1b(settings.scalar_op_files.size());
   vector<arma::mat> OpScalar2b(settings.scalar_op_files.size());
   
@@ -141,7 +142,7 @@ int main(int argc, char** argv)
   for (size_t i=0; i<settings.scalar_op_files.size();++i)
   {
 //      cout << "reading scalar transition operator " << settings.scalar_op_files[i] << endl;
-      trans.GetScalarTransitionOperator(settings.scalar_op_files[i],OpScalar1b[i],OpScalar2b[i]);
+      trans.GetScalarTransitionOperator(settings.scalar_op_files[i],OpScalar0b[i],OpScalar1b[i],OpScalar2b[i]);
       ScalarME1[i] = arma::field<arma::mat>(settings.J2_f.size(),settings.J2_i.size() );
       ScalarME2[i] = arma::field<arma::mat>(settings.J2_f.size(),settings.J2_i.size() );
   }
@@ -276,12 +277,13 @@ int main(int argc, char** argv)
     filename += ".dat";
     ofstream scalar_out(filename); 
 
-    scalar_out << "##########################################################################################" << endl;
+    scalar_out << "############################################################################################################" << endl;
     scalar_out << "# initial vector basename: " << settings.basename_vectors_i << endl;
     scalar_out << "# final   vector basename: " << settings.basename_vectors_f << endl;
     scalar_out << "# Operator file: " << settings.scalar_op_files[isc] << endl;
-    scalar_out << "# Jf  nJf     Ji  nJi      Ei          Ef         <Op1b>          <Op2b>         <Op1b+2b> " << endl;
-    scalar_out << "###########################################################################################" << endl;
+    scalar_out << "# Zero body term: " << OpScalar0b[isc] << endl;
+    scalar_out << "# Jf  nJf     Ji  nJi      Ei          Ef         <Op1b>          <Op2b>         <Op1b+2b>     <Op0b+1b+2b>" << endl;
+    scalar_out << "###########################################################################################################" << endl;
   
     for (size_t indexJf=0; indexJf<settings.J2_f.size();++indexJf)
     {
@@ -301,6 +303,7 @@ int main(int argc, char** argv)
                       << scientific << setw(14) << setprecision(6) << ScalarME1[isc](indexJf,indexJi)(njf,nji) << "  "
                       << scientific << setw(14) << setprecision(6) << ScalarME2[isc](indexJf,indexJi)(njf,nji) << "  "
                       << scientific << setw(14) << setprecision(6) << ScalarME1[isc](indexJf,indexJi)(njf,nji) + ScalarME2[isc](indexJf,indexJi)(njf,nji) << "  "
+                      << scientific << setw(14) << setprecision(6) << ScalarME1[isc](indexJf,indexJi)(njf,nji) + ScalarME2[isc](indexJf,indexJi)(njf,nji) + OpScalar0b[isc]
                       << endl;
          }
         }

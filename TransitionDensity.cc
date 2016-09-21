@@ -309,6 +309,7 @@ void TransitionDensity::CalculateMschemeAmplitudes()
 }
 
 
+
 double TransitionDensity::OBTD(int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int m_index_a, int m_index_b, int Lambda2 )
 {
 
@@ -317,7 +318,82 @@ double TransitionDensity::OBTD(int J_index_i, int eigvec_i, int J_index_f, int e
 
   if ((J2i+Lambda2 < J2f) or (abs(J2i-Lambda2)>J2f)) return 0;
   
-  int mu = 0;
+  int mu = Lambda2%2;
+  int Mi = J2i%2;
+  int Mf = J2f%2;
+  double clebsch_fi = CG(J2i,Mi,Lambda2,mu,J2f,Mf);
+  if (abs(clebsch_fi)<1e-9)
+  {
+     cout << "Warning got zero Clebsch while inverting the Wigner-Eckart theorem" << endl;
+     cout << "J2i=" << J2i << " M2f=" << Mf << " Lambda2=" << Lambda2 << " mu=" << mu << " J2f=" << J2f << " M2f=" << Mf << endl;
+     return 0;
+  }
+
+  int j2_a = m_orbits[m_index_a].j2;
+  int j2_b = m_orbits[m_index_b].j2;
+
+  m_index_a += (j2_a - m_orbits[m_index_a].mj2)/2;
+  m_index_b += (j2_b - m_orbits[m_index_b].mj2)/2;
+
+  
+  // find m-scheme orbits so that m_a = m_b, which will work for mu=0
+  double obd = 0;
+  int ma_min = max(-j2_a,mu-j2_b);
+  int ma_max = min(j2_a,mu+j2_b);
+
+
+  for ( auto& it_amp : amplitudes )
+  {
+    auto& key = it_amp.first;
+    double amp_i = it_amp.second[J_index_i][eigvec_i];
+    if (abs(amp_i)<1e-7) continue;
+
+
+    for ( int ma=ma_min;ma<=ma_max;ma+=2)
+    {
+      int mb = ma - mu;
+      int ia = m_index_a - ( j2_a -ma )/2;
+      int ib = m_index_b - ( j2_b -mb )/2;
+
+      // convention: tilded destruction operator b~(m) = (-1)**(jb + mb) b(-m)
+      //                                         b(m)  = (-1)**(jb -mb) b~(-m)
+      int phase_b = (1-(j2_b-mb)%4);
+      double clebsch = CG(j2_a,ma,j2_b,-mb,Lambda2,mu) ;
+      uint64_t mask_a = (0x1<<ia);
+      uint64_t mask_b = (0x1<<ib);
+
+
+
+      if ( not( key[0] & mask_b )) continue;
+      if ( ia != ib and   ( key[0] & mask_a) ) continue;
+      auto new_key = key;
+      new_key[0] &= ~mask_b;  // remove orbit b
+      new_key[0] |=  mask_a;  // add to orbit a
+      if (amplitudes.find(new_key) == amplitudes.end() ) continue;
+      int phase_ladder = 1;
+      for (int iphase=min(ia,ib)+1;iphase<max(ia,ib);++iphase) if( (key[0] >>iphase )&0x1) phase_ladder *=-1;
+      double amp_f = amplitudes[new_key][J_index_f][eigvec_f];
+      obd += clebsch * amp_i * amp_f * phase_ladder * phase_b;
+    }
+  }
+  
+  obd *= sqrt((J2f+1.)/(Lambda2+1)) / clebsch_fi;
+
+  return obd;
+
+}
+
+
+/*
+double TransitionDensity::OBTD(int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int m_index_a, int m_index_b, int Lambda2 )
+{
+
+  int J2i = Jlist[J_index_i];
+  int J2f = Jlist[J_index_f];
+
+  if ((J2i+Lambda2 < J2f) or (abs(J2i-Lambda2)>J2f)) return 0;
+  
+  int mu = Lambda2%2;
   int Mi = J2i%2;
   int Mf = J2f%2;
   double clebsch_fi = CG(J2i,Mi,Lambda2,mu,J2f,Mf);
@@ -377,6 +453,8 @@ double TransitionDensity::OBTD(int J_index_i, int eigvec_i, int J_index_f, int e
   return obd;
 
 }
+*/
+
 
 
 
@@ -385,7 +463,7 @@ double TransitionDensity::TBTD(int J_index_i, int eigvec_i, int J_index_f, int e
 
   int J2i = Jlist[J_index_i];
   int J2f = Jlist[J_index_f];
-  int mu = 0;
+  int mu = Lambda2%2;
   int Mi = J2i%2;
   int Mf = J2f%2;
   
@@ -767,7 +845,8 @@ arma::mat TransitionDensity::GetTwoBodyTransitionOperator( string filename , int
 
 
 
-void TransitionDensity::GetScalarTransitionOperator( string filename, arma::mat& Op1b, arma::mat& Op2b)
+//void TransitionDensity::GetScalarTransitionOperator( string filename, arma::mat& Op1b, arma::mat& Op2b)
+void TransitionDensity::GetScalarTransitionOperator( string filename, double& Op0b, arma::mat& Op1b, arma::mat& Op2b)
 {
 
   // make a list of m-scheme indices for the beginning of each j-shell
@@ -813,7 +892,13 @@ void TransitionDensity::GetScalarTransitionOperator( string filename, arma::mat&
 
   int dummy;
 
-  while (line.find("!") != string::npos)   getline(opfile,line);
+  while (line.find("!") != string::npos)
+  {
+    getline(opfile,line);
+    auto zb_ptr = line.find("Zero body term:");
+    if ( zb_ptr != string::npos)
+       istringstream( line.substr(zb_ptr + 16) ) >> Op0b;
+  }
 
   istringstream iss( line );
   iss >> dummy;
