@@ -434,11 +434,6 @@ double TransitionDensity::TBTD(int J_index_i, int eigvec_i, int J_index_f, int e
   if ((j2_c+j2_d<J2cd) or (abs(j2_c-j2_d)>J2cd)) return 0;
   if ((J2ab+J2cd < Lambda2) or (abs(J2ab-J2cd)>Lambda2)) return 0;
   
-
-
-  double tbd = 0;
-  int Mab_max = min(J2ab,J2cd);
-
   vector<vector<mvec_type>> keys_i;
   vector<double> amplitudes_i;
   for (auto& it_amp : amplitudes )
@@ -474,7 +469,10 @@ double TransitionDensity::TBTD(int J_index_i, int eigvec_i, int J_index_f, int e
   if (m_index_a==m_index_b) norm *= SQRT2;  
   if (m_index_c==m_index_d) norm *= SQRT2;  
 
-  for (int Mab=-Mab_max;Mab<=Mab_max;Mab+=2)
+  double tbd = 0;
+  int Mab_min = max(-J2ab,mu-J2cd);
+  int Mab_max = min( J2ab,mu+J2cd);
+  for (int Mab=Mab_min;Mab<=Mab_max;Mab+=2)
   {
     int Mcd = mu - Mab;
     int phasecd = (1- abs(J2cd - Mcd)%4); // phase from getting rid of the tildes
