@@ -96,9 +96,6 @@ JMState JMState::Jplus()
       int iword = i_m/(sizeof(mvec_type)*8);
       int ibit = i_m%(sizeof(mvec_type)*8);
       if ( (not((mvec_in[iword]>>ibit)&0x1)) or ((mvec_in[iword]>>(ibit+1))&0x1)  ) continue; // Pauli principle
-      if (mvec_in[0]==5)
-      {
-      }
       
       int j2  = m_orbits[i_m].j2;
       int mj2 = m_orbits[i_m].mj2;
@@ -109,9 +106,6 @@ JMState JMState::Jplus()
       mvec_out.push_back( temp_mvec_out );
       coefs.push_back( sqrt( j2*(j2+2)-mj2*(mj2+2) )*0.5 );
    }
-//   float norm = sqrt( inner_product(begin(coefs),end(coefs),begin(coefs),0.));
-//   if (abs(norm)>1e-9)
-//     for (size_t i=0;i<coefs.size();i++) coefs[i] /= norm;
 
    for (size_t i=0;i<coefs.size();i++)
    {
@@ -122,7 +116,6 @@ JMState JMState::Jplus()
   jmout.Normalize();
 
   return jmout;
-
 }
 
 

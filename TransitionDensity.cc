@@ -4,8 +4,10 @@
 #include <iostream>
 #include <algorithm>
 #include <armadillo>
+#include <unordered_map>
 
 #include "TransitionDensity.hh"
+#include "JMState.hh"
 
 #define SQRT2 1.4142135623730950488
 
@@ -321,13 +323,6 @@ double TransitionDensity::OBTD(int J_index_i, int eigvec_i, int J_index_f, int e
   int mu = Lambda2%2;
   int Mi = J2i%2;
   int Mf = J2f%2;
-  double clebsch_fi = CG(J2i,Mi,Lambda2,mu,J2f,Mf);
-  if (abs(clebsch_fi)<1e-9)
-  {
-     cout << "Warning got zero Clebsch while inverting the Wigner-Eckart theorem" << endl;
-     cout << "J2i=" << J2i << " M2f=" << Mf << " Lambda2=" << Lambda2 << " mu=" << mu << " J2f=" << J2f << " M2f=" << Mf << endl;
-     return 0;
-  }
 
   int j2_a = m_orbits[m_index_a].j2;
   int j2_b = m_orbits[m_index_b].j2;
@@ -341,80 +336,33 @@ double TransitionDensity::OBTD(int J_index_i, int eigvec_i, int J_index_f, int e
   int ma_min = max(-j2_a,mu-j2_b);
   int ma_max = min(j2_a,mu+j2_b);
 
-
-  for ( auto& it_amp : amplitudes )
+  vector<vector<mvec_type>> keys_i;
+  vector<double> amplitudes_i;
+  for (auto& it_amp : amplitudes )
   {
-    auto& key = it_amp.first;
-    double amp_i = it_amp.second[J_index_i][eigvec_i];
-    if (abs(amp_i)<1e-7) continue;
-
-
-    for ( int ma=ma_min;ma<=ma_max;ma+=2)
-    {
-      int mb = ma - mu;
-      int ia = m_index_a - ( j2_a -ma )/2;
-      int ib = m_index_b - ( j2_b -mb )/2;
-
-      // convention: tilded destruction operator b~(m) = (-1)**(jb + mb) b(-m)
-      //                                         b(m)  = (-1)**(jb -mb) b~(-m)
-      int phase_b = (1-(j2_b-mb)%4);
-      double clebsch = CG(j2_a,ma,j2_b,-mb,Lambda2,mu) ;
-      uint64_t mask_a = (0x1<<ia);
-      uint64_t mask_b = (0x1<<ib);
-
-
-
-      if ( not( key[0] & mask_b )) continue;
-      if ( ia != ib and   ( key[0] & mask_a) ) continue;
-      auto new_key = key;
-      new_key[0] &= ~mask_b;  // remove orbit b
-      new_key[0] |=  mask_a;  // add to orbit a
-      if (amplitudes.find(new_key) == amplitudes.end() ) continue;
-      int phase_ladder = 1;
-      for (int iphase=min(ia,ib)+1;iphase<max(ia,ib);++iphase) if( (key[0] >>iphase )&0x1) phase_ladder *=-1;
-      double amp_f = amplitudes[new_key][J_index_f][eigvec_f];
-      obd += clebsch * amp_i * amp_f * phase_ladder * phase_b;
-    }
+     double amp_i = it_amp.second[J_index_i][eigvec_i];
+     if (abs(amp_i)<1e-7) continue;
+     auto& key = it_amp.first;
+     keys_i.push_back( key );
+     amplitudes_i.push_back(amp_i);
   }
-  
-  obd *= sqrt((J2f+1.)/(Lambda2+1)) / clebsch_fi;
 
-  return obd;
-
-}
-
-
-/*
-double TransitionDensity::OBTD(int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int m_index_a, int m_index_b, int Lambda2 )
-{
-
-  int J2i = Jlist[J_index_i];
-  int J2f = Jlist[J_index_f];
-
-  if ((J2i+Lambda2 < J2f) or (abs(J2i-Lambda2)>J2f)) return 0;
-  
-  int mu = Lambda2%2;
-  int Mi = J2i%2;
-  int Mf = J2f%2;
   double clebsch_fi = CG(J2i,Mi,Lambda2,mu,J2f,Mf);
   if (abs(clebsch_fi)<1e-9)
   {
-     cout << "Warning got zero Clebsch while inverting the Wigner-Eckart theorem" << endl;
-     cout << "J2i=" << J2i << " M2f=" << Mf << " Lambda2=" << Lambda2 << " mu=" << mu << " J2f=" << J2f << " M2f=" << Mf << endl;
-     return 0;
+     clebsch_fi = CG(J2i,Mi+2,Lambda2,mu-2,J2f,Mf);
+     if (abs(clebsch_fi)<1e-9)
+     {
+        cout << " ERROR:    Still got zero Clebsch" << endl;
+        cout << "           J2i=" << J2i << " M2i=" << Mi+2 << " Lambda2=" << Lambda2 << " mu=" << mu-2 << " J2f=" << J2f << " M2f=" << Mf << endl;
+        return 0;
+     }
+     else
+     {
+       Jplus(keys_i, amplitudes_i, J2i, Mi);
+     }
   }
 
-  int j2_a = m_orbits[m_index_a].j2;
-  int j2_b = m_orbits[m_index_b].j2;
-
-  m_index_a += (j2_a - m_orbits[m_index_a].mj2)/2;
-  m_index_b += (j2_b - m_orbits[m_index_b].mj2)/2;
-
-  
-  // find m-scheme orbits so that m_a = m_b, which will work for mu=0
-  double obd = 0;
-  int ma_min = max(-j2_a,mu-j2_b);
-  int ma_max = min(j2_a,mu+j2_b);
 
   for ( int ma=ma_min;ma<=ma_max;ma+=2)
   {
@@ -422,25 +370,26 @@ double TransitionDensity::OBTD(int J_index_i, int eigvec_i, int J_index_f, int e
     int ia = m_index_a - ( j2_a -ma )/2;
     int ib = m_index_b - ( j2_b -mb )/2;
 
+    uint64_t mask_a = (0x1<<ia);
+    uint64_t mask_b = (0x1<<ib);
+
     // convention: tilded destruction operator b~(m) = (-1)**(jb + mb) b(-m)
     //                                         b(m)  = (-1)**(jb -mb) b~(-m)
     int phase_b = (1-(j2_b-mb)%4);
     double clebsch = CG(j2_a,ma,j2_b,-mb,Lambda2,mu) ;
-    uint64_t mask_a = (0x1<<ia);
-    uint64_t mask_b = (0x1<<ib);
 
-
-    for ( auto& it_amp : amplitudes )
+    for (size_t iamp=0; iamp<amplitudes_i.size(); ++iamp)
     {
-      auto& key = it_amp.first;
+      auto& key = keys_i[iamp];
+      auto& amp_i = amplitudes_i[iamp];
+
       if ( not( key[0] & mask_b )) continue;
       if ( ia != ib and   ( key[0] & mask_a) ) continue;
-      double amp_i = it_amp.second[J_index_i][eigvec_i];
-      if (abs(amp_i)<1e-7) continue;
       auto new_key = key;
       new_key[0] &= ~mask_b;  // remove orbit b
       new_key[0] |=  mask_a;  // add to orbit a
       if (amplitudes.find(new_key) == amplitudes.end() ) continue;
+
       int phase_ladder = 1;
       for (int iphase=min(ia,ib)+1;iphase<max(ia,ib);++iphase) if( (key[0] >>iphase )&0x1) phase_ladder *=-1;
       double amp_f = amplitudes[new_key][J_index_f][eigvec_f];
@@ -453,7 +402,7 @@ double TransitionDensity::OBTD(int J_index_i, int eigvec_i, int J_index_f, int e
   return obd;
 
 }
-*/
+
 
 
 
@@ -486,16 +435,37 @@ double TransitionDensity::TBTD(int J_index_i, int eigvec_i, int J_index_f, int e
   if ((J2ab+J2cd < Lambda2) or (abs(J2ab-J2cd)>Lambda2)) return 0;
   
 
-  double clebsch_fi = CG(J2i,Mi,Lambda2,mu,J2f,Mf);
-  if (abs(clebsch_fi)<1e-9)
-  {
-     cout << "Warning got zero Clebsch while inverting the Wigner-Eckart theorem" << endl;
-     cout << "J2i=" << J2i << " M2f=" << Mf << " Lambda2=" << Lambda2 << " mu=" << mu << " J2f=" << J2f << " M2f=" << Mf << endl;
-     return 0;
-  }
 
   double tbd = 0;
   int Mab_max = min(J2ab,J2cd);
+
+  vector<vector<mvec_type>> keys_i;
+  vector<double> amplitudes_i;
+  for (auto& it_amp : amplitudes )
+  {
+     double amp_i = it_amp.second[J_index_i][eigvec_i];
+     if (abs(amp_i)<1e-7) continue;
+     auto& key = it_amp.first;
+     keys_i.push_back( key );
+     amplitudes_i.push_back(amp_i);
+  }
+
+  double clebsch_fi = CG(J2i,Mi,Lambda2,mu,J2f,Mf);
+  if (abs(clebsch_fi)<1e-9)
+  {
+     clebsch_fi = CG(J2i,Mi+2,Lambda2,mu-2,J2f,Mf);
+     if (abs(clebsch_fi)<1e-9)
+     {
+        cout << " ERROR:    Still got zero Clebsch" << endl;
+        cout << "           J2i=" << J2i << " M2i=" << Mi+2 << " Lambda2=" << Lambda2 << " mu=" << mu-2 << " J2f=" << J2f << " M2f=" << Mf << endl;
+        return 0;
+     }
+     else
+     {
+       Jplus(keys_i, amplitudes_i, J2i, Mi);
+     }
+  }
+
 
   // Restricted sum a<=b c<=d gives 1/[(1+delta_ab)(1+delta_cd)], while
   // using normalized TBMEs gives sqrt[ (1+delta_ab)(1+delta_cd) ].
@@ -538,11 +508,10 @@ double TransitionDensity::TBTD(int J_index_i, int eigvec_i, int J_index_f, int e
         uint64_t mask_ab = ((0x1 << ia ) + (0x1 << ib) );
         uint64_t mask_cd = ((0x1 << ic ) + (0x1 << id) );
 
-        for (auto& it_amp : amplitudes )
+        for ( size_t iamp=0; iamp<amplitudes_i.size(); ++iamp )
         {
-          double amp_i = it_amp.second[J_index_i][eigvec_i];
-          if (abs(amp_i)<1e-7) continue;
-          auto& key = it_amp.first;
+          auto& key = keys_i[iamp];
+          auto& amp_i = amplitudes_i[iamp];
 
           if (not(( (key[0] >> ic) & (key[0] >> id) )&0x1) ) continue;
           auto new_key = key;
@@ -946,6 +915,58 @@ void TransitionDensity::GetScalarTransitionOperator( string filename, double& Op
   }
 
 }
+
+
+
+
+
+void TransitionDensity::Jplus(vector<vector<mvec_type>>& mvecs_in, vector<double>& amp_in, int J2, int M2)
+{
+  M2 +=2;
+  if (M2 > J2)
+  {
+     mvecs_in.clear();
+     amp_in.clear();
+     return;
+  }
+  unordered_map<vector<mvec_type>,double,KeyHash> amps_out;
+
+  for (size_t i=0;i<mvecs_in.size();++i)
+  {
+    auto& mvec_in = mvecs_in[i];
+    for (size_t i_m=0; i_m<m_orbits.size();++i_m)
+    {
+      int iword = i_m/(sizeof(mvec_type)*8);
+      int ibit = i_m%(sizeof(mvec_type)*8);
+      if ( (not((mvec_in[iword]>>ibit)&0x1)) or ((mvec_in[iword]>>(ibit+1))&0x1)  ) continue; // Pauli principle
+      
+      int j2  = m_orbits[i_m].j2;
+      int mj2 = m_orbits[i_m].mj2;
+      if (mj2==j2) continue;
+      vector<mvec_type> temp_mvec_out = mvec_in;
+      temp_mvec_out[iword] &= ~(0x1 << (ibit));
+      temp_mvec_out[iword] |=  (0x1 << (ibit+1));
+      amps_out[temp_mvec_out] += sqrt( j2*(j2+2)-mj2*(mj2+2) )*0.5 * amp_in[i];
+    }
+  }
+  
+  mvecs_in.clear();
+  amp_in.clear();
+  for (auto& it_amp : amps_out)
+  {
+    if ( abs(it_amp.second)>1e-6)
+    {
+      mvecs_in.push_back(it_amp.first);
+      amp_in.push_back(it_amp.second);
+    }
+  }
+  // don't forget to normalize...
+  double norm = sqrt( inner_product(begin(amp_in),end(amp_in),begin(amp_in),0.0) );
+  for (size_t i=0;i<amp_in.size();++i) amp_in[i] /= norm;
+}
+
+
+
 
 
 // Write out the eigenvectors in the Darmstadt MBPT/NCSM format
