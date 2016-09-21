@@ -440,7 +440,7 @@ Settings ReadInput(istream& input, string mode)
 
   if (mode == "interactive")
   {
-    cout << "output eigenvectors as mbpt.egv? (Y/n): " << flush;
+    cout << "output eigenvectors as mbpt.egv? (Y/[n]): " << flush;
   }
   getline(input,line);
   iss.clear();
