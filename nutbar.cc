@@ -296,6 +296,7 @@ int main(int argc, char** argv)
          if (abs(Ji-Jf)>0.1) continue;
          for (size_t nji=0; nji<settings.NJ_i[indexJi];++nji)
          {
+           double zerobody = (nji==njf) ? OpScalar0b[isc] : 0;
            scalar_out << fixed << setw(4) << setprecision(1) << Jf << " " << setw(3) << njf+1 << "    "
                       << fixed << setw(4) << setprecision(1) << Ji << " " << setw(3) << nji+1 << " "
                       << fixed << setw(10) << setprecision(3) << trans.nuvec_list[indexJf].alpha[njf] << "  "
@@ -303,7 +304,7 @@ int main(int argc, char** argv)
                       << scientific << setw(14) << setprecision(6) << ScalarME1[isc](indexJf,indexJi)(njf,nji) << "  "
                       << scientific << setw(14) << setprecision(6) << ScalarME2[isc](indexJf,indexJi)(njf,nji) << "  "
                       << scientific << setw(14) << setprecision(6) << ScalarME1[isc](indexJf,indexJi)(njf,nji) + ScalarME2[isc](indexJf,indexJi)(njf,nji) << "  "
-                      << scientific << setw(14) << setprecision(6) << ScalarME1[isc](indexJf,indexJi)(njf,nji) + ScalarME2[isc](indexJf,indexJi)(njf,nji) + OpScalar0b[isc]
+                      << scientific << setw(14) << setprecision(6) << ScalarME1[isc](indexJf,indexJi)(njf,nji) + ScalarME2[isc](indexJf,indexJi)(njf,nji) + zerobody 
                       << endl;
          }
         }
