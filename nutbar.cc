@@ -146,7 +146,11 @@ int main(int argc, char** argv)
       ScalarME1[i] = arma::field<arma::mat>(settings.J2_f.size(),settings.J2_i.size() );
       ScalarME2[i] = arma::field<arma::mat>(settings.J2_f.size(),settings.J2_i.size() );
   }
-  
+ 
+ 
+  ofstream densout("nutbar_densities.dat");
+  densout << "# One body transition densities" << endl;
+ 
   for (size_t Ji=0;Ji<settings.J2_i.size();++Ji )
   {
    for (size_t Jf=0;Jf<settings.J2_f.size();++Jf )
@@ -175,6 +179,17 @@ int main(int argc, char** argv)
         obtd = trans.CalcOBTD(Ji,ivec,Jf,fvec,Lambda*2);
         double obme = arma::accu( TensorOp1b % obtd );
         TensorME1(Jf,Ji)(fvec,ivec) = obme;
+        densout << endl;
+        densout << Jf << " " <<  settings.NJ_f[Jf] << " " << Ji << " " << settings.NJ_i[Ji] << endl;
+        densout << "-------------- OBTD ---------------------" << endl;
+        for (size_t i=0;i<obtd.n_rows;++i)
+        {
+          for (size_t j=0;j<obtd.n_cols;++j)
+          {
+             densout << i << " " << j << " "  << obtd(i,j) << endl;
+          }
+        }
+       
       }
       
       if (settings.tensor_op_files.size()>1)
@@ -182,6 +197,15 @@ int main(int argc, char** argv)
         tbtd = trans.CalcTBTD(Ji,ivec,Jf,fvec,Lambda*2);
         double tbme = arma::accu( TensorOp2b % tbtd);
         TensorME2(Jf,Ji)(fvec,ivec) = tbme;
+        densout << endl;
+        densout << "-------------- TBTD ---------------------" << endl;
+        for (size_t i=0;i<tbtd.n_rows;++i)
+        {
+          for (size_t j=0;j<tbtd.n_cols;++j)
+          {
+             densout << i << " " << j << " "  << tbtd(i,j) << endl;
+          }
+        }
       }
 //      cout << "obtd" << endl << obtd << endl;
 //      cout << "<Op1b>" << obme << endl;
@@ -314,6 +338,9 @@ int main(int argc, char** argv)
 
 
   }
+
+
+
 
 
   return 0;
