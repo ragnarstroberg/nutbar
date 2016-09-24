@@ -149,7 +149,7 @@ int main(int argc, char** argv)
  
  
   ofstream densout("nutbar_densities.dat");
-  densout << "# One body transition densities" << endl;
+  densout << "# One and two body transition densities" << endl;
  
   for (size_t Ji=0;Ji<settings.J2_i.size();++Ji )
   {
@@ -180,13 +180,14 @@ int main(int argc, char** argv)
         double obme = arma::accu( TensorOp1b % obtd );
         TensorME1(Jf,Ji)(fvec,ivec) = obme;
         densout << endl;
-        densout << Jf << " " <<  settings.NJ_f[Jf] << " " << Ji << " " << settings.NJ_i[Ji] << endl;
+        densout << "Jf nJf  Ji nJi = " << setw(3) << setprecision(1) << settings.J2_f[Jf]*0.5 << " " << fvec+1  << "    " << setw(3) << setprecision(1) << settings.J2_i[Ji]*0.5 << " " << ivec+1  << endl;
         densout << "-------------- OBTD ---------------------" << endl;
         for (size_t i=0;i<obtd.n_rows;++i)
         {
           for (size_t j=0;j<obtd.n_cols;++j)
           {
-             densout << i << " " << j << " "  << obtd(i,j) << endl;
+             if (abs(obtd(i,j)>1e-7))
+             densout << setw(3) << i << " " << setw(3) << j << " "  << setw(12) << fixed << setprecision(8) << obtd(i,j) << endl;
           }
         }
        
@@ -203,7 +204,8 @@ int main(int argc, char** argv)
         {
           for (size_t j=0;j<tbtd.n_cols;++j)
           {
-             densout << i << " " << j << " "  << tbtd(i,j) << endl;
+             if (abs(tbtd(i,j)>1e-7))
+             densout << setw(3) << i << " " << setw(3) << j << " "  << setw(12) << fixed << setprecision(8) << tbtd(i,j) << endl;
           }
         }
       }
