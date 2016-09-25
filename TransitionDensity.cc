@@ -354,12 +354,13 @@ double TransitionDensity::OBTD(int J_index_i, int eigvec_i, int J_index_f, int e
      if (abs(clebsch_fi)<1e-9)
      {
         cout << " ERROR:    Still got zero Clebsch" << endl;
-        cout << "           J2i=" << J2i << " M2i=" << Mi+2 << " Lambda2=" << Lambda2 << " mu=" << mu-2 << " J2f=" << J2f << " M2f=" << Mf << endl;
         return 0;
      }
      else
      {
        Jplus(keys_i, amplitudes_i, J2i, Mi);
+       Mi += 2;
+       mu -=2;
      }
   }
 
@@ -389,6 +390,7 @@ double TransitionDensity::OBTD(int J_index_i, int eigvec_i, int J_index_f, int e
       new_key[0] &= ~mask_b;  // remove orbit b
       new_key[0] |=  mask_a;  // add to orbit a
       if (amplitudes.find(new_key) == amplitudes.end() ) continue;
+
 
       int phase_ladder = 1;
       for (int iphase=min(ia,ib)+1;iphase<max(ia,ib);++iphase) if( (key[0] >>iphase )&0x1) phase_ladder *=-1;
@@ -458,6 +460,8 @@ double TransitionDensity::TBTD(int J_index_i, int eigvec_i, int J_index_f, int e
      else
      {
        Jplus(keys_i, amplitudes_i, J2i, Mi);
+       Mi+=2;
+       mu-=2;
      }
   }
 
@@ -920,8 +924,7 @@ void TransitionDensity::GetScalarTransitionOperator( string filename, double& Op
 
 void TransitionDensity::Jplus(vector<vector<mvec_type>>& mvecs_in, vector<double>& amp_in, int J2, int M2)
 {
-  M2 +=2;
-  if (M2 > J2)
+  if (M2+2 > J2)
   {
      mvecs_in.clear();
      amp_in.clear();
@@ -945,6 +948,10 @@ void TransitionDensity::Jplus(vector<vector<mvec_type>>& mvecs_in, vector<double
       temp_mvec_out[iword] &= ~(0x1 << (ibit));
       temp_mvec_out[iword] |=  (0x1 << (ibit+1));
       amps_out[temp_mvec_out] += sqrt( j2*(j2+2)-mj2*(mj2+2) )*0.5 * amp_in[i];
+//      if (J2==2)
+//      {
+//        cout << "       " << j2 << " " << mj2 << " " << sqrt( j2*(j2+2)-mj2*(mj2+2))*0.5 << " " << amp_in[i] << endl;
+//      }
     }
   }
   

@@ -186,7 +186,7 @@ int main(int argc, char** argv)
         {
           for (size_t j=0;j<obtd.n_cols;++j)
           {
-             if (abs(obtd(i,j)>1e-7))
+             if (abs(obtd(i,j))>1e-7)
              densout << setw(3) << i << " " << setw(3) << j << " "  << setw(12) << fixed << setprecision(8) << obtd(i,j) << endl;
           }
         }
