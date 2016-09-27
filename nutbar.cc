@@ -98,7 +98,7 @@ int main(int argc, char** argv)
   trans.CalculateMschemeAmplitudes();
   
 //  if (settings.write_egv)
-  if (find( begin(settings.options), end(settings.options), "egv") != end(settings.options));
+  if (find( begin(settings.options), end(settings.options), "egv") != end(settings.options))
   {
     trans.WriteEGV("mbpt.egv");
     trans.WriteTRDENS_input("trdens.in");
