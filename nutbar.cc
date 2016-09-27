@@ -33,7 +33,8 @@ struct Settings
   vector<int> NJ_i;  // number of states for each initial J
   vector<int> J2_f;  // 2*J for final states
   vector<int> NJ_f;  // number of states for each final J
-  bool write_egv; // option to write out eigenvector in format readable by Petr Navratil's TRDENS code
+  vector<string> options;
+//  bool write_egv; // option to write out eigenvector in format readable by Petr Navratil's TRDENS code
 };
 
 // forward declaration. implementation is below main().
@@ -61,7 +62,10 @@ int main(int argc, char** argv)
     settings = ReadInput(cin, "interactive");
   }
   
-  
+  cout << "options: ";
+  for (string opt : settings.options) cout << opt << " ";
+  cout << endl; 
+ 
   // Some shuffling around to put things in the TransitionDensity class format
   // this should really be done in a much neater way
   trans.basename = settings.basename_vectors_i;
@@ -93,7 +97,8 @@ int main(int argc, char** argv)
   
   trans.CalculateMschemeAmplitudes();
   
-  if (settings.write_egv)
+//  if (settings.write_egv)
+  if (find( begin(settings.options), end(settings.options), "egv") != end(settings.options));
   {
     trans.WriteEGV("mbpt.egv");
     trans.WriteTRDENS_input("trdens.in");
@@ -172,6 +177,7 @@ int main(int argc, char** argv)
      for (int fvec = 0; fvec<settings.NJ_f[Jf]; ++fvec)
      {
       if (Ji==Jf and fvec>ivec) continue;
+      if ( ( find( begin(settings.options), end(settings.options), "diag") != end(settings.options)) and not( Ji==Jf and ivec==fvec))  continue;
 //      cout << Ji << " " << ivec << " ->  " << Jf << " " << fvec << endl;
       arma::mat obtd,tbtd;
       if (settings.tensor_op_files.size()>0)
@@ -180,7 +186,8 @@ int main(int argc, char** argv)
         double obme = arma::accu( TensorOp1b % obtd );
         TensorME1(Jf,Ji)(fvec,ivec) = obme;
         densout << endl;
-        densout << "Jf nJf  Ji nJi = " << setw(3) << setprecision(1) << settings.J2_f[Jf]*0.5 << " " << fvec+1  << "    " << setw(3) << setprecision(1) << settings.J2_i[Ji]*0.5 << " " << ivec+1  << endl;
+        densout << "Jf nJf  Ji nJi = " << setw(3) << setprecision(1) << settings.J2_f[Jf]*0.5 << " " << fvec+1
+                << "    " << setw(3) << setprecision(1) << settings.J2_i[Ji]*0.5 << " " << ivec+1  << endl;
         densout << "-------------- OBTD ---------------------" << endl;
         for (size_t i=0;i<obtd.n_rows;++i)
         {
@@ -322,6 +329,7 @@ int main(int argc, char** argv)
          if (abs(Ji-Jf)>0.1) continue;
          for (size_t nji=0; nji<settings.NJ_i[indexJi];++nji)
          {
+           if ( ( find( begin(settings.options), end(settings.options), "diag") != end(settings.options)) and not( Ji==Jf and nji==njf))  continue;
            double zerobody = (nji==njf) ? OpScalar0b[isc] : 0;
            scalar_out << fixed << setw(4) << setprecision(1) << Jf << " " << setw(3) << njf+1 << "    "
                       << fixed << setw(4) << setprecision(1) << Ji << " " << setw(3) << nji+1 << " "
@@ -473,16 +481,19 @@ Settings ReadInput(istream& input, string mode)
 
   if (mode == "interactive")
   {
-    cout << "output eigenvectors as mbpt.egv? (Y/[n]): " << flush;
+//    cout << "output eigenvectors as mbpt.egv? (Y/[n]): " << flush;
+    cout << "list any other option keywords (egv diag): " << flush;
   }
   getline(input,line);
   iss.clear();
   iss.str(line);
-  string yesno;
-  iss >> yesno;
-  settings.write_egv = false;
-  if (yesno.find("Y")!=string::npos or yesno.find("y")!=string::npos)
-  settings.write_egv = true;
+  string s;
+  while (iss >> s) settings.options.push_back(s);
+//  string yesno;
+//  iss >> yesno;
+//  settings.write_egv = false;
+//  if (yesno.find("Y")!=string::npos or yesno.find("y")!=string::npos)
+//  settings.write_egv = true;
   
 
   string outfilename = "nutbar_" + settings.basename_vectors_f.substr( settings.basename_vectors_f.find_last_of("/")+1 );
@@ -506,8 +517,10 @@ Settings ReadInput(istream& input, string mode)
   outfile << endl;
   for (auto nJ : settings.NJ_f)  outfile << nJ << " ";
   outfile << endl;
-  if (settings.write_egv) outfile << "y" << endl;
-  else outfile << "n" << endl;
+  for (auto opt : settings.options) outfile << opt << " ";
+  outfile << endl;
+//  if (settings.write_egv) outfile << "y" << endl;
+//  else outfile << "n" << endl;
 
   return settings;
 
