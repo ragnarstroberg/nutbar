@@ -671,7 +671,7 @@ arma::mat TransitionDensity::GetOneBodyTransitionOperator( string filename, int&
   while ( line.find("index") == string::npos)   getline(opfile, line);
   vector<int> orbits_in;
   getline(opfile, line);
-  while ( line.size() > 5 )  // no specific reason why 5. Just looking for the empty comment line
+  while ( line.size() > 5 and line.find("a")==string::npos )  // no specific reason why 5. Just looking for the empty comment line
   {
     int index,n,l,j2,tz2;
     istringstream(line.substr(1)) >> index >> n >> l >> j2 >> tz2;
@@ -739,7 +739,6 @@ arma::mat TransitionDensity::GetTwoBodyTransitionOperator( string filename , int
       if (    m_orbits[jorbits[i]].n==n  and m_orbits[jorbits[i]].l2==2*l and m_orbits[jorbits[i]].j2==j2 and m_orbits[jorbits[i]].tz2==-tz2)
       {
          orbits_in.push_back(i);
-//         cout << orbits_in.size() << " :  " << i << "  " << jorbits[i] << "  " << n << " " << l << " " << j2 << " " << tz2 << endl;
       }
     }
     getline(opfile, line);
@@ -783,14 +782,11 @@ arma::mat TransitionDensity::GetTwoBodyTransitionOperator( string filename , int
       cout << "trouble:  " << a << " " << b << " " << c << " " << d << " " <<Jab << " " << Jcd << " " << Op_abcd << endl;
     }
 
-    cout << ibra << " " << iket << endl;
-
     Op2b(ibra,iket) = Op_abcd;
     if (ibra!=iket)
       Op2b(iket,ibra) = (1 - abs(Jab+Jcd )%4) * Op_abcd; // phase factor (-1)^(Jab-Jcd)
   }
 
-  cout <<" done Op2b" << endl;
   return Op2b;
 }
 
@@ -1152,9 +1148,9 @@ void TransitionDensity::WriteTRDENS_input(string fname)
 
 void TransitionDensity::GetAZFromFileName(  )
 {
-  string trimmed_basename = basename.substr( basename.find_last_of("/")+1 );
+  string trimmed_basename = (basename.find("/")==string::npos) ? basename : basename.substr( basename.find_last_of("/")+1 );
   string element = trimmed_basename.substr( 0,2);
-  cout << trimmed_basename << " " << element << endl;
+//  cout << trimmed_basename << " -> element = " << element << endl;
   auto el_position = find( periodic_table.begin(),periodic_table.end(), element);
   if (el_position == periodic_table.end())
   {
