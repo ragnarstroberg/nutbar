@@ -9,6 +9,9 @@
 #include <stdlib.h>
 #include <vector>
 #include <string>
+#ifndef NOBOOST
+#include "boost/filesystem.hpp"
+#endif
 
 #include "NuBasis.hh"
 #include "NuProj.hh"
@@ -62,10 +65,17 @@ int main(int argc, char** argv)
     settings = ReadInput(cin, "interactive");
   }
   
-  cout << "options: ";
+  cout << "options: [ ";
   for (string opt : settings.options) cout << opt << " ";
-  cout << endl; 
+  cout << " ]" << endl; 
  
+
+  if (settings.basename_vectors_i != settings.basename_vectors_f)
+  {
+    cout << "ERROR. I haven't implemented transitions between different nuclei yet." << endl;
+    return 1;
+  }
+
   // Some shuffling around to put things in the TransitionDensity class format
   // this should really be done in a much neater way
   trans.basename = settings.basename_vectors_i;
@@ -104,9 +114,10 @@ int main(int argc, char** argv)
     trans.WriteTRDENS_input("trdens.in");
   }
   
+  cout << "operators: [ " ;
   for (auto ops : settings.scalar_op_files) cout << ops << " ";
   for (auto ops : settings.tensor_op_files) cout << ops << " ";
-  cout << endl;
+  cout << "] " << endl;
 
   arma::mat TensorOp1b;
   arma::mat TensorOp2b;
@@ -114,13 +125,13 @@ int main(int argc, char** argv)
   int Lambda=0,RankT=0,parity=0;
   if (settings.tensor_op_files.size() > 0)
   {
-    cout << "one body op: " << settings.tensor_op_files[0] << endl;
+//    cout << "one body op: " << settings.tensor_op_files[0] << endl;
     TensorOp1b = trans.GetOneBodyTransitionOperator(settings.tensor_op_files[0], Lambda, RankT, parity);
 //    cout << "Op1b " << endl << TensorOp1b << endl;
   }
   if (settings.tensor_op_files.size() > 1)
   {
-    cout << "two body op: " << settings.tensor_op_files[1] << endl;
+//    cout << "two body op: " << settings.tensor_op_files[1] << endl;
     int Lambda2,RankT2,parity2;
     TensorOp2b = trans.GetTwoBodyTransitionOperator(settings.tensor_op_files[1], Lambda2, RankT2, parity2);
     if (Lambda2 != Lambda or RankT2!=RankT or parity2 != parity)
@@ -232,9 +243,6 @@ int main(int argc, char** argv)
           }
         }
       }
-//      cout << "obtd" << endl << obtd << endl;
-//      cout << "<Op1b>" << obme << endl;
-//      cout << "<Op2b>" << tbme << endl;
   
       if (Ji==Jf )
       {
@@ -384,35 +392,70 @@ Settings ReadInput(istream& input, string mode)
 
   if (mode == "interactive")
   {
-    cout << "basename for *.sps files, e.g. sdpn: " << flush;
+    settings.basename_sps = "(none found)"; // set default
+#ifndef NOBOOST
+    for (auto& path : boost::filesystem::directory_iterator("."))
+    {
+      string pathstring = path.path().string();
+      if (pathstring.substr( pathstring.find_last_of(".") ) == ".sps")
+      {
+        if (pathstring.find("bab") == string::npos)
+        {
+           settings.basename_sps = pathstring.substr( 0,pathstring.find_last_of(".") );
+           break;
+        }
+      }
+    }
+#endif
+    cout << "basename for *.sps files, default [" << settings.basename_sps << "]: " << flush;
   }
 
   getline(input,line);
-  iss.clear();
-  iss.str(line);
-  iss >> settings.basename_sps;
-
+  if (mode !="interactive" or line !="")
+  {
+    iss.clear();
+    iss.str(line);
+    iss >> settings.basename_sps;
+  }
 
   if (mode == "interactive")
   {
-    cout << "basename for initial state *.xvc files, e.g. ne200: " << flush;
+    settings.basename_vectors_i = "(none found)"; // set default
+#ifndef NOBOOST
+    for (auto& path : boost::filesystem::directory_iterator("."))
+    {
+      string pathstring = path.path().string();
+      if (pathstring.substr( pathstring.find_last_of(".") ) == ".xvc")
+      {
+        settings.basename_vectors_i = pathstring.substr( 0, pathstring.find_last_of("/")+6 );
+        break;
+      }
+    }
+#endif
+    cout << "basename for initial state *.xvc files, default [" << settings.basename_vectors_i << "]: " << flush;
   }
 
   getline(input,line);
-  iss.clear();
-  iss.str(line);
-  iss >> settings.basename_vectors_i;
-
+  if (mode!="interactive" or line !="")
+  {
+     iss.clear();
+     iss.str(line);
+     iss >> settings.basename_vectors_i;
+  }
 
   if (mode == "interactive")
   {
-    cout << "basename for final state *.xvc files, e.g. ne200: " << flush;
+    settings.basename_vectors_f = settings.basename_vectors_i; // set default
+    cout << "basename for final state *.xvc files, default [" << settings.basename_vectors_f << "]: " << flush;
   }
 
   getline(input,line);
-  iss.clear();
-  iss.str(line);
-  iss >> settings.basename_vectors_f;
+  if (mode!="interactive" or line !="")
+  {
+    iss.clear();
+    iss.str(line);
+    iss >> settings.basename_vectors_f;
+  }
 
 
 
@@ -469,6 +512,9 @@ Settings ReadInput(istream& input, string mode)
   {
     settings.NJ_i.push_back(int(nJ));
   }
+  // if we didn't read enough values, just repeat the last entered value until we have enough
+  if (settings.NJ_i.size()<1) settings.NJ_i.push_back(1);
+  while (settings.J2_i.size()>settings.NJ_i.size()) settings.NJ_i.push_back(settings.NJ_i.back());
 
   
   if (mode == "interactive")
@@ -494,6 +540,8 @@ Settings ReadInput(istream& input, string mode)
   {
     settings.NJ_f.push_back(int(nJ));
   }
+  if (settings.NJ_f.size()<1) settings.NJ_f.push_back(1);
+  while (settings.J2_f.size()>settings.NJ_f.size()) settings.NJ_f.push_back(settings.NJ_f.back());
 
   if (mode == "interactive")
   {
@@ -505,12 +553,6 @@ Settings ReadInput(istream& input, string mode)
   iss.str(line);
   string s;
   while (iss >> s) settings.options.push_back(s);
-//  string yesno;
-//  iss >> yesno;
-//  settings.write_egv = false;
-//  if (yesno.find("Y")!=string::npos or yesno.find("y")!=string::npos)
-//  settings.write_egv = true;
-  
 
   string outfilename = "nutbar_" + settings.basename_vectors_f.substr( settings.basename_vectors_f.find_last_of("/")+1 );
   if (settings.basename_vectors_i != settings.basename_vectors_f)
