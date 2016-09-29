@@ -10,7 +10,7 @@
 #include <vector>
 #include <string>
 #ifndef NOBOOST
-#include "boost/filesystem.hpp"
+#include <boost/filesystem.hpp>
 #endif
 
 #include "NuBasis.hh"

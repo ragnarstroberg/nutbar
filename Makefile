@@ -4,7 +4,11 @@ CPP = g++
 FLAGS = -std=c++11 -fopenmp -O3 -march=native
 INCLUDE = -I$(HOME)/include/armadillo
 LIBS = -lgsl -lopenblas
-LIBS += -lboost_system -lboost_filesystem
+
+# This doesn't work everywhere yet.
+#LIBS += -lboost_system -lboost_filesystem
+FLAGS += -DNOBOOST
+
 
 ifeq ($(DEBUG),on)
   FLAGS += -g
