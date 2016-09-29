@@ -597,24 +597,25 @@ arma::mat TransitionDensity::CalcTBTD( int J_index_i, int eigvec_i, int J_index_
 //  }
 
   // generate all the two body states that are needed
-  vector<int> ket_a, ket_b, ket_J;
-  for (size_t a=0;a<jorbits.size();++a)
-  {
-    int ja = m_orbits[jorbits[a]].j2;
-    for (size_t b=a; b<jorbits.size();++b)
-    {      
-      int jb = m_orbits[jorbits[b]].j2;
-      int Jmin = abs(ja-jb);
-      int Jmax = ja+jb;
-      for (int J2=Jmin;J2<=Jmax;J2+=2)
-      {
-        if (a==b and (J2%4)>0) continue;
-        ket_a.push_back(a);
-        ket_b.push_back(b);
-        ket_J.push_back(J2);
-      }
-    }
-  }
+   SetupKets();
+//  vector<int> ket_a, ket_b, ket_J;
+//  for (size_t a=0;a<jorbits.size();++a)
+//  {
+//    int ja = m_orbits[jorbits[a]].j2;
+//    for (size_t b=a; b<jorbits.size();++b)
+//    {      
+//      int jb = m_orbits[jorbits[b]].j2;
+//      int Jmin = abs(ja-jb);
+//      int Jmax = ja+jb;
+//      for (int J2=Jmin;J2<=Jmax;J2+=2)
+//      {
+//        if (a==b and (J2%4)>0) continue;
+//        ket_a.push_back(a);
+//        ket_b.push_back(b);
+//        ket_J.push_back(J2);
+//      }
+//    }
+//  }
 
   arma::mat tbtd(ket_J.size(), ket_J.size(), arma::fill::zeros);
   int Ji = Jlist[J_index_i];
@@ -723,12 +724,6 @@ arma::mat TransitionDensity::GetTwoBodyTransitionOperator( string filename , int
   while ( line.find("Parity") == string::npos)   getline(opfile, line);
   istringstream( line.substr( line.rfind(":")+1 ) ) >> parity;
 
-  // set up the j scheme basis from the m scheme basis
-//  vector<int> jorbits;
-//  for (size_t i=0;i<m_orbits.size();i+= m_orbits[i].j2+1)
-//  {
-//    if (m_orbits[i].mj2 == -m_orbits[i].j2) jorbits.push_back(i);
-//  }
 
   // Read in the single particle basis used in the file
   while ( line.find("index") == string::npos)   getline(opfile, line);
@@ -750,31 +745,9 @@ arma::mat TransitionDensity::GetTwoBodyTransitionOperator( string filename , int
     getline(opfile, line);
   }
 
-//  cout << "------------------------------------" << endl;
 
-//  for (size_t i=0;i<orbits_in.size();++i) cout << i << " :  " << orbits_in[i] << endl;
+   SetupKets();
 
-
-  vector<int> ket_a, ket_b, ket_J;
-
-  for (size_t a=0;a<jorbits.size();++a)
-  {
-    int ja = m_orbits[jorbits[a]].j2;
-    for (size_t b=a; b<jorbits.size();++b)
-    {      
-      int jb = m_orbits[jorbits[b]].j2;
-      int Jmin = abs(ja-jb);
-      int Jmax = ja+jb;
-      for (int J2=Jmin;J2<=Jmax;J2+=2)
-      {
-        if (a==b and (J2%4)>0) continue;
-//        cout << setw(3) << ket_a.size() << ": " << a << " " << b << " " << J2 << endl;
-        ket_a.push_back(a);
-        ket_b.push_back(b);
-        ket_J.push_back(J2);
-      }
-    }
-  }
 
   arma::mat Op2b(ket_J.size(), ket_J.size(), arma::fill::zeros);
 
@@ -805,12 +778,19 @@ arma::mat TransitionDensity::GetTwoBodyTransitionOperator( string filename , int
     while( ibra<ket_a.size() and not( (ket_a[ibra]==a) and (ket_b[ibra]==b) and ket_J[ibra]==Jab) ) ibra++;
     while( iket<ket_a.size() and not( (ket_a[iket]==c) and (ket_b[iket]==d) and ket_J[iket]==Jcd) ) iket++;
 
+    if (ibra >= ket_a.size() or iket >= ket_a.size())
+    {
+      cout << "trouble:  " << a << " " << b << " " << c << " " << d << " " <<Jab << " " << Jcd << " " << Op_abcd << endl;
+    }
+
+    cout << ibra << " " << iket << endl;
 
     Op2b(ibra,iket) = Op_abcd;
     if (ibra!=iket)
       Op2b(iket,ibra) = (1 - abs(Jab+Jcd )%4) * Op_abcd; // phase factor (-1)^(Jab-Jcd)
   }
 
+  cout <<" done Op2b" << endl;
   return Op2b;
 }
 
@@ -828,24 +808,25 @@ void TransitionDensity::GetScalarTransitionOperator( string filename, double& Op
 //  }
 
   // generate all the two body states that are needed
-  vector<int> ket_a, ket_b, ket_J;
-  for (size_t a=0;a<jorbits.size();++a)
-  {
-    int ja = m_orbits[jorbits[a]].j2;
-    for (size_t b=a; b<jorbits.size();++b)
-    {      
-      int jb = m_orbits[jorbits[b]].j2;
-      int Jmin = abs(ja-jb);
-      int Jmax = ja+jb;
-      for (int J2=Jmin;J2<=Jmax;J2+=2)
-      {
-        if (a==b and (J2%4)>0) continue;
-        ket_a.push_back(a);
-        ket_b.push_back(b);
-        ket_J.push_back(J2);
-      }
-    }
-  }
+   SetupKets();
+//  vector<int> ket_a, ket_b, ket_J;
+//  for (size_t a=0;a<jorbits.size();++a)
+//  {
+//    int ja = m_orbits[jorbits[a]].j2;
+//    for (size_t b=a; b<jorbits.size();++b)
+//    {      
+//      int jb = m_orbits[jorbits[b]].j2;
+//      int Jmin = abs(ja-jb);
+//      int Jmax = ja+jb;
+//      for (int J2=Jmin;J2<=Jmax;J2+=2)
+//      {
+//        if (a==b and (J2%4)>0) continue;
+//        ket_a.push_back(a);
+//        ket_b.push_back(b);
+//        ket_J.push_back(J2);
+//      }
+//    }
+//  }
   Op1b.set_size( jorbits.size(), jorbits.size() );
   Op2b.set_size( ket_a.size(), ket_a.size() );
   Op1b.zeros();
@@ -916,6 +897,29 @@ void TransitionDensity::GetScalarTransitionOperator( string filename, double& Op
     Op2b(iket,ibra) = Op2b(ibra,iket);
   }
 
+}
+
+
+void TransitionDensity::SetupKets()
+{
+  if (ket_a.size()>0) return;
+  for (size_t a=0;a<jorbits.size();++a)
+  {
+    int ja = m_orbits[jorbits[a]].j2;
+    for (size_t b=a; b<jorbits.size();++b)
+    {      
+      int jb = m_orbits[jorbits[b]].j2;
+      int Jmin = abs(ja-jb);
+      int Jmax = ja+jb;
+      for (int J2=Jmin;J2<=Jmax;J2+=2)
+      {
+        if (a==b and (J2%4)>0) continue;
+        ket_a.push_back(a);
+        ket_b.push_back(b);
+        ket_J.push_back(J2);
+      }
+    }
+  }
 }
 
 

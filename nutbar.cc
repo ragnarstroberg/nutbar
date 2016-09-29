@@ -98,7 +98,7 @@ int main(int argc, char** argv)
   trans.CalculateMschemeAmplitudes();
   
 //  if (settings.write_egv)
-  if (find( begin(settings.options), end(settings.options), "egv") != end(settings.options))
+  if ( find( begin(settings.options), end(settings.options), "egv")  != end(settings.options))
   {
     trans.WriteEGV("mbpt.egv");
     trans.WriteTRDENS_input("trdens.in");
@@ -154,7 +154,23 @@ int main(int argc, char** argv)
  
  
   ofstream densout("nutbar_densities.dat");
-  densout << "# One and two body transition densities" << endl;
+  densout << "# One and two body transition densities" << endl << "#" << endl;
+  densout << "# One-body basis:" << endl;
+  densout << "# i   n   l   2j  2tz (proton=+1)" << endl;
+  for (size_t i=0;i<trans.jorbits.size();++i)
+  {
+    auto morb = trans.m_orbits[trans.jorbits[i]];
+    densout << setw(3) << i << " " << setw(3) << morb.n << " " << setw(3) << morb.l2/2 << " " << setw(3) << morb.j2 << " " << setw(3) << morb.tz2 << endl;
+  }
+
+  trans.SetupKets();
+  densout << "# Two-body basis: " << endl;
+  densout << "# i   a   b   J" << endl;
+  for (size_t i=0;i<trans.ket_a.size();++i)
+  {
+    densout << setw(3) << i << " " << setw(3) << trans.ket_a[i] << " " << setw(3) << trans.ket_b[i] << " " << setw(3) << trans.ket_J[i]/2 << endl;
+  }
+
  
   for (size_t Ji=0;Ji<settings.J2_i.size();++Ji )
   {

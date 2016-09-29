@@ -35,6 +35,9 @@ class TransitionDensity
   static vector<char> an_code;
   static vector<string> periodic_table;
   unordered_map<int,int> max_states_per_J;
+  vector<int> ket_a;
+  vector<int> ket_b;
+  vector<int> ket_J;
 
 
   TransitionDensity();
@@ -52,6 +55,7 @@ class TransitionDensity
   void GetScalarTransitionOperator( string filename, double& Op0b, arma::mat& Op1b, arma::mat& Op2b );
   arma::mat CalcOBTD( int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int Lambda2);
   arma::mat CalcTBTD( int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int Lambda2);
+  void SetupKets();
   void Jplus(vector<vector<mvec_type>>& mvecs_in, vector<double>& amp_in, int J2, int M2);
   void WriteEGV( string fname);
   void WriteTRDENS_input(string fname);
