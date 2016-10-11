@@ -78,27 +78,33 @@ int main(int argc, char** argv)
 
   // Some shuffling around to put things in the TransitionDensity class format
   // this should really be done in a much neater way
-  trans.basename = settings.basename_vectors_i;
+  trans.basename_i = settings.basename_vectors_i;
+  trans.basename_f = settings.basename_vectors_f;
   trans.sps_file_name = settings.basename_sps + ".sps";
-  trans.Jlist = settings.J2_i;
+  trans.Jlist_i = settings.J2_i;
+  trans.Jlist_f = settings.J2_f;
   for (size_t i=0;i<settings.J2_i.size();++i)
   {
-    trans.max_states_per_J[settings.J2_i[i]] = settings.NJ_i[i];
+    trans.max_states_per_J_i[settings.J2_i[i]] = settings.NJ_i[i];
   }
-  for (size_t i=0;i<settings.J2_f.size(); ++i)
+  for (size_t i=0;i<settings.J2_f.size();++i)
   {
-    auto iter = find( begin(trans.Jlist), end(trans.Jlist), settings.J2_f[i]);
-    if ( iter == end(trans.Jlist) )
-    {
-      trans.Jlist.push_back(settings.J2_f[i]);
-      trans.max_states_per_J[settings.J2_f[i]] = settings.NJ_f[i];
-    }
-    else
-    {
-      int k = iter - begin(trans.Jlist);
-      trans.max_states_per_J[settings.J2_f[i]] = max( trans.max_states_per_J[settings.J2_f[i]], settings.NJ_f[i]);
-    }
+    trans.max_states_per_J_f[settings.J2_f[i]] = settings.NJ_f[i];
   }
+//  for (size_t i=0;i<settings.J2_f.size(); ++i)
+//  {
+//    auto iter = find( begin(trans.Jlist), end(trans.Jlist), settings.J2_f[i]);
+//    if ( iter == end(trans.Jlist) )
+//    {
+//      trans.Jlist.push_back(settings.J2_f[i]);
+//      trans.max_states_per_J[settings.J2_f[i]] = settings.NJ_f[i];
+//    }
+//    else
+//    {
+//      int k = iter - begin(trans.Jlist);
+//      trans.max_states_per_J[settings.J2_f[i]] = max( trans.max_states_per_J[settings.J2_f[i]], settings.NJ_f[i]);
+//    }
+//  }
   
   
   
@@ -171,7 +177,8 @@ int main(int argc, char** argv)
   for (size_t i=0;i<trans.jorbits.size();++i)
   {
     auto morb = trans.m_orbits[trans.jorbits[i]];
-    densout << setw(3) << i << " " << setw(3) << morb.n << " " << setw(3) << morb.l2/2 << " " << setw(3) << morb.j2 << " " << setw(3) << morb.tz2 << endl;
+    densout << setw(3) << i << " " << setw(3) << morb.n << " " << setw(3) << morb.l2/2 << " "
+            << setw(3) << morb.j2 << " " << setw(3) << morb.tz2 << endl;
   }
 
   trans.SetupKets();
@@ -205,7 +212,7 @@ int main(int argc, char** argv)
      {
       if (Ji==Jf and fvec>ivec) continue;
       if ( ( find( begin(settings.options), end(settings.options), "diag") != end(settings.options)) and not( Ji==Jf and ivec==fvec))  continue;
-//      cout << Ji << " " << ivec << " ->  " << Jf << " " << fvec << endl;
+//      cout << endl << endl << "xxxxxxxxxxxxxxxxxx and here I find myself. " << settings.J2_i[Ji] << " " << ivec << " ->  " << settings.J2_f[Jf] << " " << fvec << endl;
       arma::mat obtd,tbtd;
       if (settings.tensor_op_files.size()>0)
       {
@@ -244,10 +251,10 @@ int main(int argc, char** argv)
         }
       }
   
-      if (Ji==Jf )
+      if (Ji==Jf and OpScalar1b.size()>0)
       {
-        obtd = trans.CalcOBTD(Ji,ivec,Jf,fvec,0) / sqrt(trans.Jlist[Ji]+1.);
-        tbtd = trans.CalcTBTD(Ji,ivec,Jf,fvec,0) / sqrt(trans.Jlist[Ji]+1.) ;
+        obtd = trans.CalcOBTD(Ji,ivec,Jf,fvec,0) / sqrt(trans.Jlist_i[Ji]+1.);
+        tbtd = trans.CalcTBTD(Ji,ivec,Jf,fvec,0) / sqrt(trans.Jlist_i[Ji]+1.) ;
 //        arma::mat occ_op(obtd.n_rows,obtd.n_cols);
 //        for (int i=0;i<occ_op.n_rows;++i)
 //        {
@@ -309,8 +316,8 @@ int main(int argc, char** argv)
          {
            tensor_out << fixed << setw(4) << setprecision(1) << Jf << " " << setw(3) << njf+1 << "    "
                       << fixed << setw(4) << setprecision(1) << Ji << " " << setw(3) << nji+1 << " "
-                      << fixed << setw(10) << setprecision(3) << trans.nuvec_list[indexJf].alpha[njf] << "  "
-                      << fixed << setw(10) << setprecision(3) << trans.nuvec_list[indexJi].alpha[nji] << "  "
+                      << fixed << setw(10) << setprecision(3) << trans.nuvec_list_f[indexJf].alpha[njf] << "  "
+                      << fixed << setw(10) << setprecision(3) << trans.nuvec_list_i[indexJi].alpha[nji] << "  "
                       << scientific << setw(14) << setprecision(6) << TensorME1(indexJf,indexJi)(njf,nji) << "  "
                       << scientific << setw(14) << setprecision(6) << TensorME2(indexJf,indexJi)(njf,nji) << "  "
                       << scientific << setw(14) << setprecision(6) << TensorME1(indexJf,indexJi)(njf,nji) + TensorME2(indexJf,indexJi)(njf,nji) << "  "
@@ -357,8 +364,8 @@ int main(int argc, char** argv)
            double zerobody = (nji==njf) ? OpScalar0b[isc] : 0;
            scalar_out << fixed << setw(4) << setprecision(1) << Jf << " " << setw(3) << njf+1 << "    "
                       << fixed << setw(4) << setprecision(1) << Ji << " " << setw(3) << nji+1 << " "
-                      << fixed << setw(10) << setprecision(3) << trans.nuvec_list[indexJf].alpha[njf] << "  "
-                      << fixed << setw(10) << setprecision(3) << trans.nuvec_list[indexJi].alpha[nji] << "  "
+                      << fixed << setw(10) << setprecision(3) << trans.nuvec_list_f[indexJf].alpha[njf] << "  "
+                      << fixed << setw(10) << setprecision(3) << trans.nuvec_list_i[indexJi].alpha[nji] << "  "
                       << scientific << setw(14) << setprecision(6) << ScalarME1[isc](indexJf,indexJi)(njf,nji) << "  "
                       << scientific << setw(14) << setprecision(6) << ScalarME2[isc](indexJf,indexJi)(njf,nji) << "  "
                       << scientific << setw(14) << setprecision(6) << ScalarME1[isc](indexJf,indexJi)(njf,nji) + ScalarME2[isc](indexJf,indexJi)(njf,nji) << "  "

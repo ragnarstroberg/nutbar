@@ -19,34 +19,46 @@ class TransitionDensity
 {
  public:
   
-  string basename;
+  string basename_i;
+  string basename_f;
   string sps_file_name;
-  size_t total_number_levels;
-  vector<vector<float>> blank_vector;
+  size_t total_number_levels_i;
+  size_t total_number_levels_f;
+  vector<vector<float>> blank_vector_i;
+  vector<vector<float>> blank_vector_f;
   vector<MschemeOrbit> m_orbits;
   vector<int> jorbits;
-  vector<int> Jlist;
-  int MJtot;
+  vector<int> Jlist_i;
+  vector<int> Jlist_f;
+  int MJtot_i;
+  int MJtot_f;
   int Nshell;
-  int A,Z,Acore,Zcore;
-  vector<JBasis> jbasis_list;
-  vector<NuVec> nuvec_list;
-  unordered_map< vector<mvec_type>, vector<vector<float>>, KeyHash > amplitudes;
-  static vector<char> an_code;
-  static vector<string> periodic_table;
-  unordered_map<int,int> max_states_per_J;
+  int A_i,Z_i,A_f,Z_f,Acore,Zcore;
+  vector<JBasis> jbasis_list_i;
+  vector<JBasis> jbasis_list_f;
+  vector<NuVec> nuvec_list_i;
+  vector<NuVec> nuvec_list_f;
+  unordered_map< vector<mvec_type>, vector<vector<float>>, KeyHash > amplitudes_i;
+  unordered_map< vector<mvec_type>, vector<vector<float>>, KeyHash > amplitudes_f;
+  unordered_map<int,int> max_states_per_J_i;
+  unordered_map<int,int> max_states_per_J_f;
   vector<int> ket_a;
   vector<int> ket_b;
   vector<int> ket_J;
+  static vector<char> an_code;
+  static vector<string> periodic_table;
 
 
   TransitionDensity();
   TransitionDensity(vector<int> jlist);
-  void ReadInputFromFile(string filename);
-  void ReadInputInteractive();
+  TransitionDensity(vector<int> jlist_i, vector<int> jlist_f);
+//  void ReadInputFromFile(string filename);
+//  void ReadInputInteractive();
   void ReadFiles( );
   void CalculateMschemeAmplitudes();
-  void SetAZ(int a, int z){A=a;Z=z;};
+  void SetAZ(int a, int z){A_i=a;Z_i=z;A_f=a;Z_f=a;};
+  void SetAZ_i(int a, int z){A_i=a;Z_i=z;};
+  void SetAZ_f(int a, int z){A_f=a;Z_f=z;};
   void SetAZcore(int a, int z){Acore=a;Zcore=z;};
   double OBTD(int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int m_index_a, int m_index_b, int Lambda2 );
   double TBTD(int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int m_index_a, int m_index_b, int m_index_c, int m_index_d, int J2ab, int J2cd, int Lambda2 );
@@ -59,7 +71,7 @@ class TransitionDensity
   void Jplus(vector<vector<mvec_type>>& mvecs_in, vector<double>& amp_in, int J2, int M2);
   void WriteEGV( string fname);
   void WriteTRDENS_input(string fname);
-  void SetMaxStatesPerJ( int J2, int imax){ max_states_per_J[J2] = imax;};
+//  void SetMaxStatesPerJ( int J2, int imax){ max_states_per_J[J2] = imax;};
   void GetAZFromFileName( );
   void ReadSPfile();
 
