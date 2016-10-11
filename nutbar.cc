@@ -300,7 +300,8 @@ int main(int argc, char** argv)
     tensor_out << "# initial vector basename: " << settings.basename_vectors_i << endl;
     tensor_out << "# final   vector basename: " << settings.basename_vectors_f << endl;
     tensor_out << "# One body file: " << settings.tensor_op_files[0] << endl;
-    tensor_out << "# Two body file: " << settings.tensor_op_files[1] << endl;
+    if (settings.tensor_op_files.size()>1)
+      tensor_out << "# Two body file: " << settings.tensor_op_files[1] << endl;
     tensor_out << "# Jf  nJf     Ji  nJi      Ei          Ef         <Op1b>          <Op2b>         <Op1b+2b> " << endl;
     tensor_out << "###########################################################################################" << endl;
   
