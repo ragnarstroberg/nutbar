@@ -755,6 +755,14 @@ arma::mat TransitionDensity::GetOneBodyTransitionOperator( string filename, int&
 {
 
   ifstream opfile(filename);
+
+  if (not opfile.good())
+  {
+    cout << "Trouble reading file " << filename << endl;
+    Rank_J = -1;
+    return arma::mat();
+  }
+
   string line;
 
   while ( line.find("Rank_J") == string::npos)   getline(opfile, line);
@@ -809,6 +817,12 @@ arma::mat TransitionDensity::GetTwoBodyTransitionOperator( string filename , int
 {
 
   ifstream opfile(filename);
+  if (not opfile.good())
+  {
+    cout << "Trouble reading file " << filename << endl;
+    Rank_J = -2;
+    return arma::mat();
+  }
   string line;
 
   while ( line.find("Rank_J") == string::npos)   getline(opfile, line);

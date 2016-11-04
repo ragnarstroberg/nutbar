@@ -70,11 +70,11 @@ int main(int argc, char** argv)
   cout << " ]" << endl; 
  
 
-  if (settings.basename_vectors_i != settings.basename_vectors_f)
-  {
-    cout << "ERROR. I haven't implemented transitions between different nuclei yet." << endl;
-    return 1;
-  }
+//  if (settings.basename_vectors_i != settings.basename_vectors_f)
+//  {
+//    cout << "ERROR. I haven't implemented transitions between different nuclei yet." << endl;
+//    return 1;
+//  }
 
   // Some shuffling around to put things in the TransitionDensity class format
   // this should really be done in a much neater way
@@ -131,13 +131,11 @@ int main(int argc, char** argv)
   int Lambda=0,RankT=0,parity=0;
   if (settings.tensor_op_files.size() > 0)
   {
-//    cout << "one body op: " << settings.tensor_op_files[0] << endl;
     TensorOp1b = trans.GetOneBodyTransitionOperator(settings.tensor_op_files[0], Lambda, RankT, parity);
 //    cout << "Op1b " << endl << TensorOp1b << endl;
   }
   if (settings.tensor_op_files.size() > 1)
   {
-//    cout << "two body op: " << settings.tensor_op_files[1] << endl;
     int Lambda2,RankT2,parity2;
     TensorOp2b = trans.GetTwoBodyTransitionOperator(settings.tensor_op_files[1], Lambda2, RankT2, parity2);
     if (Lambda2 != Lambda or RankT2!=RankT or parity2 != parity)
@@ -146,7 +144,6 @@ int main(int argc, char** argv)
       return 1;
     }
   }
-  
   
   
   vector<double> OpScalar0b(settings.scalar_op_files.size());
@@ -194,7 +191,6 @@ int main(int argc, char** argv)
   {
    for (size_t Jf=0;Jf<settings.J2_f.size();++Jf )
    {
-    cout << "Jf,Ji = " << settings.J2_f[Jf]*0.5 << " " << settings.J2_i[Ji]*0.5 << endl;
     TensorME1(Jf,Ji).zeros(settings.NJ_f[Jf],settings.NJ_i[Ji]);
     TensorME2(Jf,Ji).zeros(settings.NJ_f[Jf],settings.NJ_i[Ji]);
     if ( abs(settings.J2_i[Ji] - settings.J2_f[Jf])> 2*Lambda) continue;
@@ -210,8 +206,11 @@ int main(int argc, char** argv)
     {
      for (int fvec = 0; fvec<settings.NJ_f[Jf]; ++fvec)
      {
-      if (Ji==Jf and fvec>ivec) continue;
-      if ( ( find( begin(settings.options), end(settings.options), "diag") != end(settings.options)) and not( Ji==Jf and ivec==fvec))  continue;
+      if (settings.basename_vectors_i == settings.basename_vectors_f)
+      {
+       if ( settings.J2_i[Ji]==settings.J2_f[Jf] and fvec>ivec) continue;
+       if ( ( find( begin(settings.options), end(settings.options), "diag") != end(settings.options)) and not( settings.J2_i[Ji]==settings.J2_f[Jf] and ivec==fvec))  continue;
+      }
 //      cout << endl << endl << "xxxxxxxxxxxxxxxxxx and here I find myself. " << settings.J2_i[Ji] << " " << ivec << " ->  " << settings.J2_f[Jf] << " " << fvec << endl;
       arma::mat obtd,tbtd;
       if (settings.tensor_op_files.size()>0)
@@ -251,7 +250,7 @@ int main(int argc, char** argv)
         }
       }
   
-      if (Ji==Jf and OpScalar1b.size()>0)
+      if (settings.J2_i[Ji]==settings.J2_f[Jf] and OpScalar1b.size()>0)
       {
         obtd = trans.CalcOBTD(Ji,ivec,Jf,fvec,0) / sqrt(trans.Jlist_i[Ji]+1.);
         tbtd = trans.CalcTBTD(Ji,ivec,Jf,fvec,0) / sqrt(trans.Jlist_i[Ji]+1.) ;
@@ -302,7 +301,7 @@ int main(int argc, char** argv)
     tensor_out << "# One body file: " << settings.tensor_op_files[0] << endl;
     if (settings.tensor_op_files.size()>1)
       tensor_out << "# Two body file: " << settings.tensor_op_files[1] << endl;
-    tensor_out << "# Jf  nJf     Ji  nJi      Ei          Ef         <Op1b>          <Op2b>         <Op1b+2b> " << endl;
+    tensor_out << "# Jf  nJf     Ji  nJi      Ef          Ei         <Op1b>          <Op2b>         <Op1b+2b> " << endl;
     tensor_out << "###########################################################################################" << endl;
   
     for (size_t indexJf=0; indexJf<settings.J2_f.size();++indexJf)
