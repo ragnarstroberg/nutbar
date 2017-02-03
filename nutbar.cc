@@ -20,6 +20,7 @@
 #include "JBasis.hh"
 #include "TransitionDensity.hh"
 
+#define VERBOSE true
 
 using namespace std;
 
@@ -108,10 +109,25 @@ int main(int argc, char** argv)
   
   
   
-  
+  if (VERBOSE)
+  {
+    cout << "Reading Files" << endl;
+  }
   trans.ReadFiles();
+  if (VERBOSE)
+  {
+    cout << "done reading files." << endl;
+    cout << "CalculateMschemeAmplitudes()" << endl;
+  }
   
   trans.CalculateMschemeAmplitudes();
+
+  if (VERBOSE)
+  {
+    cout << "done calculating Mscheme amplitudes." << endl;
+    cout << "number of initial m-scheme states: " << trans.amplitudes_i.size() << " x " << trans.blank_vector_i.size()<< endl;
+    cout << "number of final m-scheme states: " << trans.amplitudes_f.size() << " x " << trans.blank_vector_f.size()<< endl;
+  }
   
 //  if (settings.write_egv)
   if ( find( begin(settings.options), end(settings.options), "egv")  != end(settings.options))

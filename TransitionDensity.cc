@@ -11,6 +11,8 @@
 
 #define SQRT2 1.4142135623730950488
 
+#define VERBOSE true
+
 using namespace std;
 
 
@@ -196,6 +198,10 @@ void TransitionDensity::ReadFiles( )
     }
   }
   
+
+#ifdef VERBOSE
+  cout << "TransitionDensity::ReadFiles -- finding all prj and nba files" << endl;
+#endif
   // Find all the prj and nba files
   int iJ;
   for (int icode : { nvalence_protons_i, -nvalence_protons_i, nvalence_neutrons_i, -nvalence_neutrons_i  } )
@@ -228,6 +234,9 @@ void TransitionDensity::ReadFiles( )
     }
   }
 
+#ifdef VERBOSE
+  cout << "TransitionDensity::ReadFiles -- finding all final prj and nba files" << endl;
+#endif
   // same thing but for final state files
   for (int icode : { nvalence_protons_f, -nvalence_protons_f, nvalence_neutrons_f, -nvalence_neutrons_f  } )
   {
@@ -260,10 +269,23 @@ void TransitionDensity::ReadFiles( )
   }
 
 
+#ifdef VERBOSE
+  cout << "TransitionDensity::ReadFiles -- Starting loop over Jlist_i" << endl;
+#endif
 
   for (int Jtot : Jlist_i )
   {
+    #ifdef VERBOSE
+      cout << "TransitionDensity::ReadFiles -- adding jbasis with " << sps_file_name << "  (";
+      for ( auto a : Afiles_i ) cout << " " << a;
+      cout << ")  (";
+      for ( auto b : Bfiles_i ) cout << " " << b;
+      cout << ")  " << Jtot << " " << MJtot_i << endl;;
+    #endif
     jbasis_list_i.emplace_back( JBasis( sps_file_name, Afiles_i, Bfiles_i, Jtot, MJtot_i));
+    #ifdef VERBOSE
+      cout << "TransitionDensity::ReadFiles -- done with emplace_back" << endl;
+    #endif
   
   // Guess the name of the xvc file
     ostr.str("");
@@ -287,9 +309,17 @@ void TransitionDensity::ReadFiles( )
       }
     }
     testread.close();
+    #ifdef VERBOSE
+    cout << "TransitionDensity::ReadFiles -- after testread.close, adding Jtot = " << Jtot << ", vecfile = " << vecfile << endl;
+    #endif
     nuvec_list_i.emplace_back( NuVec(Jtot) );
     nuvec_list_i.back().ReadFile(vecfile);
   }
+
+
+#ifdef VERBOSE
+  cout << "TransitionDensity::ReadFiles -- Starting loop over Jlist_f" << endl;
+#endif
 
   for (int Jtot : Jlist_f )
   {
