@@ -229,11 +229,8 @@ int main(int argc, char** argv)
       }
 //      cout << endl << endl << "xxxxxxxxxxxxxxxxxx and here I find myself. " << settings.J2_i[Ji] << " " << ivec << " ->  " << settings.J2_f[Jf] << " " << fvec << endl;
       arma::mat obtd,tbtd;
-      if (settings.tensor_op_files.size()>0)
-      {
         obtd = trans.CalcOBTD(Ji,ivec,Jf,fvec,Lambda*2);
-        double obme = arma::accu( TensorOp1b % obtd );
-        TensorME1(Jf,Ji)(fvec,ivec) = obme;
+//        cout << "Size of obtd = " << obtd.n_rows << "x" << obtd.n_cols << endl;
         densout << endl;
         densout << "Jf nJf  Ji nJi = " << setw(3) << setprecision(1) << settings.J2_f[Jf]*0.5 << " " << fvec+1
                 << "    " << setw(3) << setprecision(1) << settings.J2_i[Ji]*0.5 << " " << ivec+1  << endl;
@@ -247,23 +244,28 @@ int main(int argc, char** argv)
           }
         }
        
+      if (settings.tensor_op_files.size()>0)
+      {
+        double obme = arma::accu( TensorOp1b % obtd );
+        TensorME1(Jf,Ji)(fvec,ivec) = obme;
       }
       
+      tbtd = trans.CalcTBTD(Ji,ivec,Jf,fvec,Lambda*2);
+      densout << endl;
+      densout << "-------------- TBTD ---------------------" << endl;
+      for (size_t i=0;i<tbtd.n_rows;++i)
+      {
+        for (size_t j=0;j<tbtd.n_cols;++j)
+        {
+           if (abs(tbtd(i,j))>1e-7)
+           densout << setw(3) << i << " " << setw(3) << j << " "  << setw(12) << fixed << setprecision(8) << tbtd(i,j) << endl;
+        }
+      }
+
       if (settings.tensor_op_files.size()>1)
       {
-        tbtd = trans.CalcTBTD(Ji,ivec,Jf,fvec,Lambda*2);
         double tbme = arma::accu( TensorOp2b % tbtd);
         TensorME2(Jf,Ji)(fvec,ivec) = tbme;
-        densout << endl;
-        densout << "-------------- TBTD ---------------------" << endl;
-        for (size_t i=0;i<tbtd.n_rows;++i)
-        {
-          for (size_t j=0;j<tbtd.n_cols;++j)
-          {
-             if (abs(tbtd(i,j))>1e-7)
-             densout << setw(3) << i << " " << setw(3) << j << " "  << setw(12) << fixed << setprecision(8) << tbtd(i,j) << endl;
-          }
-        }
       }
   
       if (settings.J2_i[Ji]==settings.J2_f[Jf] and OpScalar1b.size()>0)
