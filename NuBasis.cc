@@ -210,14 +210,14 @@ void NuBasis::LoweringOperator( vector<mvec_type>& mvec_in, vector<vector<mvec_t
       int iword = i_m/(sizeof(mvec_type)*8);
       int ibit = i_m%(sizeof(mvec_type)*8);
       if (ibit<1) continue;
-      if ( (not((mvec_in[iword]>>ibit)&0x1)) or (mvec_in[iword]>>(ibit-1))&0x1  ) continue; // Pauli principle
+      if ( (not((mvec_in[iword]>>ibit)&0x1L)) or (mvec_in[iword]>>(ibit-1))&0x1L  ) continue; // Pauli principle
       
       int j2  = m_orbits[i_m].j2;
       int mj2 = m_orbits[i_m].mj2;
       if (mj2==-j2) continue;
       vector<mvec_type> temp_mvec_out = mvec_in;
-      temp_mvec_out[iword] &= ~(0x1 << (ibit));
-      temp_mvec_out[iword] |=  (0x1 << (ibit-1));
+      temp_mvec_out[iword] &= ~(0x1L << (ibit));
+      temp_mvec_out[iword] |=  (0x1L << (ibit-1));
       mvec_out.push_back( temp_mvec_out );
       coefs.push_back( sqrt( j2*(j2+1)-mj2*(mj2-1) )*0.5 );
    }
@@ -242,8 +242,8 @@ void NuBasis::RaisingOperator( vector<mvec_type>& mvec_in, vector<vector<mvec_ty
       int mj2 = m_orbits[i_m].mj2;
       if (mj2==j2) continue;
       vector<mvec_type> temp_mvec_out = mvec_in;
-      temp_mvec_out[iword] &= ~(0x1 << (ibit));
-      temp_mvec_out[iword] |=  (0x1 << (ibit+11));
+      temp_mvec_out[iword] &= ~(0x1L << (ibit));
+      temp_mvec_out[iword] |=  (0x1L << (ibit+11));
       mvec_out.push_back( temp_mvec_out );
       coefs.push_back( sqrt( j2*(j2+1)-mj2*(mj2-1) )*0.5 );
    }
@@ -270,10 +270,10 @@ vector<mvec_type> NuBasis::TimeReverse( vector<mvec_type>& mvec_in)
       size_t i_r = i_m - mj2; // time reversed m-state << TODO: This isn't right
       int iword_r = i_r /(sizeof(mvec_type)*8);
       i_r = i_r %(sizeof(mvec_type)*8);
-      if ( (mvec_out[iword]>>i_m_local)&0x1 ^ (mvec_out[iword_r]>>i_r)&0x1)
+      if ( (mvec_out[iword]>>i_m_local)&0x1L ^ (mvec_out[iword_r]>>i_r)&0x1L)
       {
-        mvec_out[iword] ^= (0x1 << i_m_local);
-        mvec_out[iword_r] ^= (0x1 << i_r);
+        mvec_out[iword] ^= (0x1L << i_m_local);
+        mvec_out[iword_r] ^= (0x1L << i_r);
       }
       i_m++;
    }

@@ -230,6 +230,7 @@ int main(int argc, char** argv)
 //      cout << endl << endl << "xxxxxxxxxxxxxxxxxx and here I find myself. " << settings.J2_i[Ji] << " " << ivec << " ->  " << settings.J2_f[Jf] << " " << fvec << endl;
       arma::mat obtd,tbtd;
         obtd = trans.CalcOBTD(Ji,ivec,Jf,fvec,Lambda*2);
+        if (Lambda==0) obtd /= sqrt( trans.Jlist_i[Ji]+1.);
 //        cout << "Size of obtd = " << obtd.n_rows << "x" << obtd.n_cols << endl;
         densout << endl;
         densout << "Jf nJf  Ji nJi = " << setw(3) << setprecision(1) << settings.J2_f[Jf]*0.5 << " " << fvec+1
@@ -251,6 +252,7 @@ int main(int argc, char** argv)
       }
       
       tbtd = trans.CalcTBTD(Ji,ivec,Jf,fvec,Lambda*2);
+      if (Lambda==0) tbtd /= sqrt( trans.Jlist_i[Ji]+1.);
       densout << endl;
       densout << "-------------- TBTD ---------------------" << endl;
       for (size_t i=0;i<tbtd.n_rows;++i)
@@ -270,8 +272,8 @@ int main(int argc, char** argv)
   
       if (settings.J2_i[Ji]==settings.J2_f[Jf] and OpScalar1b.size()>0)
       {
-        obtd = trans.CalcOBTD(Ji,ivec,Jf,fvec,0) / sqrt(trans.Jlist_i[Ji]+1.);
-        tbtd = trans.CalcTBTD(Ji,ivec,Jf,fvec,0) / sqrt(trans.Jlist_i[Ji]+1.) ;
+//        obtd = trans.CalcOBTD(Ji,ivec,Jf,fvec,0) / sqrt(trans.Jlist_i[Ji]+1.);
+//        tbtd = trans.CalcTBTD(Ji,ivec,Jf,fvec,0) / sqrt(trans.Jlist_i[Ji]+1.) ;
 //        arma::mat occ_op(obtd.n_rows,obtd.n_cols);
 //        for (int i=0;i<occ_op.n_rows;++i)
 //        {

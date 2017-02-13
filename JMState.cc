@@ -71,7 +71,7 @@ string JMState::PrintMstate(vector<mvec_type> vec_in) const
   {
     for (int ibit=spaces[ispace];ibit<spaces[ispace+1];++ibit)
     {
-      mstr << ((vec_in[0] >> ibit)&0x1);
+      mstr << ((vec_in[0] >> ibit)&0x1L);
     }
     mstr << " ";
   }
@@ -95,14 +95,14 @@ JMState JMState::Jplus()
    {
       int iword = i_m/(sizeof(mvec_type)*8);
       int ibit = i_m%(sizeof(mvec_type)*8);
-      if ( (not((mvec_in[iword]>>ibit)&0x1)) or ((mvec_in[iword]>>(ibit+1))&0x1)  ) continue; // Pauli principle
+      if ( (not((mvec_in[iword]>>ibit)&0x1L)) or ((mvec_in[iword]>>(ibit+1))&0x1L)  ) continue; // Pauli principle
       
       int j2  = m_orbits[i_m].j2;
       int mj2 = m_orbits[i_m].mj2;
       if (mj2==j2) continue;
       vector<mvec_type> temp_mvec_out = mvec_in;
-      temp_mvec_out[iword] &= ~(0x1 << (ibit));
-      temp_mvec_out[iword] |=  (0x1 << (ibit+1));
+      temp_mvec_out[iword] &= ~(0x1L << (ibit));
+      temp_mvec_out[iword] |=  (0x1L << (ibit+1));
       mvec_out.push_back( temp_mvec_out );
       coefs.push_back( sqrt( j2*(j2+2)-mj2*(mj2+2) )*0.5 );
    }
@@ -137,14 +137,14 @@ JMState JMState::Jminus()
       int iword = i_m/(sizeof(mvec_type)*8);
       int ibit = i_m%(sizeof(mvec_type)*8);
       if (ibit<1) continue;
-      if ( (not((mvec_in[iword]>>ibit)&0x1)) or (mvec_in[iword]>>(ibit-1))&0x1  ) continue; // Pauli principle
+      if ( (not((mvec_in[iword]>>ibit)&0x1L)) or (mvec_in[iword]>>(ibit-1))&0x1L  ) continue; // Pauli principle
       
       int j2  = m_orbits[i_m].j2;
       int mj2 = m_orbits[i_m].mj2;
       if (mj2==-j2) continue;
       vector<mvec_type> temp_mvec_out = mvec_in;
-      temp_mvec_out[iword] &= ~(0x1 << (ibit));
-      temp_mvec_out[iword] |=  (0x1 << (ibit-1));
+      temp_mvec_out[iword] &= ~(0x1L << (ibit));
+      temp_mvec_out[iword] |=  (0x1L << (ibit-1));
       mvec_out.push_back( temp_mvec_out );
       coefs.push_back( sqrt( j2*(j2+2)-mj2*(mj2-2) )*0.5 );
    }
@@ -192,10 +192,10 @@ JMState JMState::TimeReverse()
       size_t i_r = i_m - mj2; // time reversed m-state << TODO: This isn't right
       int iword_r = i_r /(sizeof(mvec_type)*8);
       i_r = i_r %(sizeof(mvec_type)*8);
-      if ( (mvec_out[iword]>>i_m_local)&0x1 ^ (mvec_out[iword_r]>>i_r)&0x1)
+      if ( (mvec_out[iword]>>i_m_local)&0x1L ^ (mvec_out[iword_r]>>i_r)&0x1L)
       {
-        mvec_out[iword] ^= (0x1 << i_m_local);
-        mvec_out[iword_r] ^= (0x1 << i_r);
+        mvec_out[iword] ^= (0x1L << i_m_local);
+        mvec_out[iword_r] ^= (0x1L << i_r);
       }
       i_m++;
    }
