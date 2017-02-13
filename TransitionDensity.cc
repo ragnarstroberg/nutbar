@@ -11,7 +11,7 @@
 
 #define SQRT2 1.4142135623730950488
 
-#define VERBOSE true
+//#define VERBOSE true
 
 using namespace std;
 
@@ -321,9 +321,27 @@ void TransitionDensity::ReadFiles( )
   cout << "TransitionDensity::ReadFiles -- Starting loop over Jlist_f" << endl;
 #endif
 
+  bool initial_final_same = true;
+  for (auto& afile : Afiles_f)
+  {
+    if ( find( begin(Afiles_i), end(Afiles_i), afile) == end(Afiles_i) ) initial_final_same = false;
+  }
+  for (auto& bfile : Bfiles_f)
+  {
+    if ( find( begin(Bfiles_i), end(Bfiles_i), bfile) == end(Bfiles_i) ) initial_final_same = false;
+  }
+
   for (int Jtot : Jlist_f )
   {
-    jbasis_list_f.emplace_back( JBasis( sps_file_name, Afiles_f, Bfiles_f, Jtot, MJtot_f));
+    auto ji_iter = find( begin(Jlist_i), end(Jlist_i), Jtot);
+    if (initial_final_same and ji_iter != end(Jlist_i) )
+    {
+      jbasis_list_f.emplace_back( jbasis_list_i[ ji_iter-begin(Jlist_i) ] );
+    }
+    else
+    {
+      jbasis_list_f.emplace_back( JBasis( sps_file_name, Afiles_f, Bfiles_f, Jtot, MJtot_f));
+    }
   
   // Guess the name of the xvc file
     ostr.str("");
@@ -347,8 +365,15 @@ void TransitionDensity::ReadFiles( )
       }
     }
     testread.close();
-    nuvec_list_f.emplace_back( NuVec(Jtot) );
-    nuvec_list_f.back().ReadFile(vecfile);
+    if (initial_final_same and ji_iter != end(Jlist_i) )
+    {
+      nuvec_list_f.emplace_back( nuvec_list_i[ ji_iter-begin(Jlist_i) ] );
+    }
+    else
+    {
+      nuvec_list_f.emplace_back( NuVec(Jtot) );
+      nuvec_list_f.back().ReadFile(vecfile);
+    }
   }
 
 

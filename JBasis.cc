@@ -3,7 +3,7 @@
 
 #include "JBasis.hh"
 
-#define VERBOSE true
+//#define VERBOSE true
 
 using namespace std;
 
