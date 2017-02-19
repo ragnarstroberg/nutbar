@@ -144,6 +144,7 @@ int main(int argc, char** argv)
   arma::mat TensorOp1b;
   arma::mat TensorOp2b;
 
+
   int Lambda=0,RankT=0,parity=0;
   if (settings.tensor_op_files.size() > 0)
   {
@@ -174,6 +175,8 @@ int main(int argc, char** argv)
   vector<arma::field<arma::mat> > ScalarME1(OpScalar1b.size());
   vector<arma::field<arma::mat> > ScalarME2(OpScalar1b.size());
 
+
+
   for (size_t i=0; i<settings.scalar_op_files.size();++i)
   {
 //      cout << "reading scalar transition operator " << settings.scalar_op_files[i] << endl;
@@ -182,7 +185,8 @@ int main(int argc, char** argv)
       ScalarME2[i] = arma::field<arma::mat>(settings.J2_f.size(),settings.J2_i.size() );
   }
  
- 
+
+
   ofstream densout("nutbar_densities.dat");
   densout << "# One and two body transition densities" << endl << "#" << endl;
   densout << "# One-body basis:" << endl;

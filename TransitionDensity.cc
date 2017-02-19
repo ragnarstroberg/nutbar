@@ -951,6 +951,7 @@ arma::mat TransitionDensity::GetTwoBodyTransitionOperator( string filename , int
     if (ibra >= ket_a.size() or iket >= ket_a.size())
     {
       cout << "trouble:  " << a << " " << b << " " << c << " " << d << " " <<Jab << " " << Jcd << " " << Op_abcd << endl;
+      cout << "   ibra = " << ibra << "  iket = " << iket << "  size = " << ket_a.size() << endl;
     }
 
     Op2b(ibra,iket) = Op_abcd;
@@ -1317,9 +1318,14 @@ void TransitionDensity::GetAZFromFileName(  )
   istringstream( trimmed_basename_i.substr(2,2) ) >> A_i;
   istringstream( trimmed_basename_f.substr(2,2) ) >> A_f;
 
+
   // now guess at what the core should be, assuming a full major oscillator shell valence space
   for (int N=0;(N+1)*(N+2)*(N+3)/3<=Z_i;++N) Zcore = (N+1)*(N+2)*(N+3)/3; 
   for (int N=0;(N+1)*(N+2)*(N+3)/3<=(A_i-Z_i);++N) Acore = Zcore + (N+1)*(N+2)*(N+3)/3; 
+
+
+  if ( A_i < Acore ) A_i +=100;
+  if ( A_f < Acore ) A_f +=100;
   
 }
 
