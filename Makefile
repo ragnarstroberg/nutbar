@@ -12,7 +12,7 @@ FLAGS += -DNOBOOST
 
 
 ifeq ($(DEBUG),on)
-  FLAGS += -g
+  FLAGS += -g -DVERBOSE
 endif
 
 OBJ = NuVec.o NuBasis.o NuProj.o JMState.o JBasis.o TransitionDensity.o
