@@ -10,10 +10,14 @@
 #include <cstdint>
 #include <bitset>
 
+#define KEY_BITS 64
+
 using namespace std;
 
 typedef int16_t part_type;
 typedef int64_t mvec_type;
+//typedef vector<mvec_type> key_type;
+typedef bitset<KEY_BITS> key_type;
 
 
 struct MschemeOrbit;
@@ -25,7 +29,7 @@ class NuBasis
   int32_t no_spart,sum_nJT;
   vector<int32_t> pindx,nJT,j,t,ibf,max_cM2,max_cTz2;
   vector<vector<part_type>> partition;
-  vector<vector<vector<mvec_type>>> vec;
+  vector<vector<key_type>> vec;
   static const int gwords;
   vector<MschemeOrbit> m_orbits;
 
@@ -37,9 +41,12 @@ class NuBasis
   void Clear();
 
   //TODO: These should be applied to a J state
-  void LoweringOperator( vector<mvec_type>& mvec_in, vector<vector<mvec_type>>& mvec_out, vector<float>& coefs);
-  void RaisingOperator( vector<mvec_type>& mvec_in, vector<vector<mvec_type>>& mvec_out, vector<float>& coefs);
-  vector<mvec_type> TimeReverse( vector<mvec_type>& mvec_in);
+//  void LoweringOperator( key_type& mvec_in, vector<key_type>& mvec_out, vector<float>& coefs);
+//  void RaisingOperator( key_type& mvec_in, vector<key_type>& mvec_out, vector<float>& coefs);
+//  void LoweringOperator( key_type& mvec_in, vector<key_type>& mvec_out, vector<float>& coefs);
+//  void RaisingOperator( key_type& mvec_in, vector<key_type>& mvec_out, vector<float>& coefs);
+//  key_type TimeReverse( key_type& mvec_in);
+//  key_type TimeReverse( key_type& mvec_in);
 
 };
 

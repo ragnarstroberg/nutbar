@@ -313,7 +313,13 @@ void TransitionDensity::ReadFiles( )
     cout << "TransitionDensity::ReadFiles -- after testread.close, adding Jtot = " << Jtot << ", vecfile = " << vecfile << endl;
     #endif
     nuvec_list_i.emplace_back( NuVec(Jtot) );
+    #ifdef VERBOSE
+    cout << "Begin read " << vecfile << endl;
+    #endif
     nuvec_list_i.back().ReadFile(vecfile);
+    #ifdef VERBOSE
+    cout << " done." << endl;
+    #endif
   }
 
 
@@ -437,7 +443,8 @@ void TransitionDensity::CalculateMschemeAmplitudes()
        cout << "ERROR istate = " << istate << ",  basis_states.size() = " << jbasis.basis_states.size() << endl;
        return;
      }
-     const JMState& jmst = jbasis.basis_states[istate];
+//     const JMState& jmst = jbasis.basis_states[istate];
+     const JMState jmst = jbasis.GetBasisState(istate);
      for (auto& it_mstate : jmst.m_coefs)
      {
        auto& key = it_mstate.first;
@@ -473,13 +480,15 @@ void TransitionDensity::CalculateMschemeAmplitudes()
        cout << "ERROR istate = " << istate << ",  basis_states.size() = " << jbasis.basis_states.size() << endl;
        return;
      }
-     const JMState& jmst = jbasis.basis_states[istate];
+//     const JMState& jmst = jbasis.basis_states[istate];
+     const JMState jmst = jbasis.GetBasisState(istate);
      for (auto& it_mstate : jmst.m_coefs)
      {
        auto& key = it_mstate.first;
        const float& m_coef = it_mstate.second;
        if( amplitudes_f.find(key) == amplitudes_f.end() ) amplitudes_f[key] = blank_vector_f;
-       amplitudes_f[key][ivec] += m_coef * level_coefs;
+//       amplitudes_f[key][ivec] += m_coef * level_coefs;
+      for (size_t ilevel=0;ilevel<imax;++ilevel) amplitudes_f[key][ivec][ilevel] += m_coef * level_coefs[ilevel];
      }
    }
   }
@@ -520,7 +529,8 @@ double TransitionDensity::OBTD(int J_index_i, int eigvec_i, int J_index_f, int e
   int ma_min = max(-j2_a,mu-j2_b);
   int ma_max = min(j2_a,mu+j2_b);
 
-  vector<vector<mvec_type>> keys_i;
+//  vector<vector<mvec_type>> keys_i;
+  vector<key_type> keys_i;
   vector<double> amp_vec_i;
 //  cout << "size of amplitudes_i = " << amplitudes_i.size() << endl;
   for (auto& it_amp : amplitudes_i )
@@ -556,8 +566,8 @@ double TransitionDensity::OBTD(int J_index_i, int eigvec_i, int J_index_f, int e
     int ia = m_index_a - ( j2_a -ma )/2;
     int ib = m_index_b - ( j2_b -mb )/2;
 
-    uint64_t mask_a = (0x1L<<ia);
-    uint64_t mask_b = (0x1L<<ib);
+//    uint64_t mask_a = (0x1L<<ia);
+//    uint64_t mask_b = (0x1L<<ib);
 
     // convention: tilded destruction operator b~(m) = (-1)**(jb + mb) b(-m)
     //                                         b(m)  = (-1)**(jb -mb) b~(-m)
@@ -570,16 +580,21 @@ double TransitionDensity::OBTD(int J_index_i, int eigvec_i, int J_index_f, int e
       auto& key = keys_i[iamp];
       auto& amp_i = amp_vec_i[iamp];
 
-      if ( not( key[0] & mask_b )) continue;
-      if ( ia != ib and   ( key[0] & mask_a) ) continue;
+//      if ( not( key[0] & mask_b )) continue;
+//      if ( ia != ib and   ( key[0] & mask_a) ) continue;
+      if ( not key[ib] ) continue;
       auto new_key = key;
-      new_key[0] &= ~mask_b;  // remove orbit b
-      new_key[0] |=  mask_a;  // add to orbit a
+      new_key.set(ib,0);
+      if ( new_key[ia] ) continue;
+      new_key.set(ia,1);
+//      new_key[0] &= ~mask_b;  // remove orbit b
+//      new_key[0] |=  mask_a;  // add to orbit a
       if (amplitudes_f.find(new_key) == amplitudes_f.end() ) continue;
 
 
       int phase_ladder = 1;
-      for (int iphase=min(ia,ib)+1;iphase<max(ia,ib);++iphase) if( (key[0] >>iphase )&0x1L) phase_ladder *=-1;
+//      for (int iphase=min(ia,ib)+1;iphase<max(ia,ib);++iphase) if( (key[0] >>iphase )&0x1L) phase_ladder *=-1;
+      for (int iphase=min(ia,ib)+1;iphase<max(ia,ib);++iphase) if( key[iphase]) phase_ladder *=-1;
       double amp_f = amplitudes_f[new_key][J_index_f][eigvec_f];
 
       obd += clebsch * amp_i * amp_f * phase_ladder * phase_b;
@@ -616,14 +631,19 @@ double TransitionDensity::TBTD(int J_index_i, int eigvec_i, int J_index_f, int e
   m_index_c += (j2_c - m_orbits[m_index_c].mj2)/2;
   m_index_d += (j2_d - m_orbits[m_index_d].mj2)/2;
 
+//  bool printout = false;
+//  if (j2_a==7 and j2_b==7 and j2_c==7 and j2_d==7 and J2ab==4 and J2cd==4) printout=true;
+
 
   // check some triangle conditions
   if ((J2f+Lambda2 < J2i) or (abs(J2f-Lambda2)>J2i)) return 0;
   if ((j2_a+j2_b<J2ab) or (abs(j2_a-j2_b)>J2ab)) return 0;
   if ((j2_c+j2_d<J2cd) or (abs(j2_c-j2_d)>J2cd)) return 0;
   if ((J2ab+J2cd < Lambda2) or (abs(J2ab-J2cd)>Lambda2)) return 0;
+
   
-  vector<vector<mvec_type>> keys_i;
+//  vector<vector<mvec_type>> keys_i;
+  vector<key_type> keys_i;
   vector<double> amp_vec_i;
   for (auto& it_amp : amplitudes_i )
   {
@@ -699,8 +719,8 @@ double TransitionDensity::TBTD(int J_index_i, int eigvec_i, int J_index_f, int e
         int id = m_index_d - ( j2_d -md )/2;
         if (ic==id) continue;
 
-        uint64_t mask_ab = ((0x1L << ia ) + (0x1L << ib) );
-        uint64_t mask_cd = ((0x1L << ic ) + (0x1L << id) );
+//        uint64_t mask_ab = ((0x1L << ia ) + (0x1L << ib) );
+//        uint64_t mask_cd = ((0x1L << ic ) + (0x1L << id) );
 
         for ( size_t iamp=0; iamp<amp_vec_i.size(); ++iamp )
         {
@@ -709,11 +729,15 @@ double TransitionDensity::TBTD(int J_index_i, int eigvec_i, int J_index_f, int e
 
 //          cout << " iamp = " << iamp << "  size of keys, amp_vec = " << keys_i.size() << "  " << amp_vec_i.size() << endl;
 //          cout << "heres where the trouble is. size of key is " << key.size() << endl;
-          if (not(( (key[0] >> ic) & (key[0] >> id) )&0x1L) ) continue;
+//          if (not(( (key[0] >> ic) & (key[0] >> id) )&0x1L) ) continue;
+          if (not (key[ic] && key[id]) ) continue;
           auto new_key = key;
-          new_key[0] &= (~ mask_cd); // remove particles from c and then from d  (d-c-)
-          if ( new_key[0] & mask_ab) continue;
-          new_key[0] |= mask_ab; // add particles to b and then to a  (a+b+)
+//          new_key[0] &= (~ mask_cd); // remove particles from c and then from d  (d-c-)
+          new_key.set(ic,0).set(id,0); // remove particles from c and then from d  (d-c-)
+//          if ( new_key[0] & mask_ab) continue;
+          if ( new_key[ia] || new_key[ib]) continue;
+//          new_key[0] |= mask_ab; // add particles to b and then to a  (a+b+)
+          new_key.set(ib,1).set(ia,1); // add particles to b and then to a  (a+b+)
 
           auto iter_newkey = amplitudes_f.find(new_key);
           if (iter_newkey == amplitudes_f.end() 
@@ -724,10 +748,16 @@ double TransitionDensity::TBTD(int J_index_i, int eigvec_i, int J_index_f, int e
 
           // pick up a phase from commuting the ladder operators
           int phase_ladder = (ia>ib xor id<ic) ? -1 : 1;
-          for (int iphase = min(ic,id)+1;iphase<max(ic,id);++iphase)  if(( key[0] >>iphase )&0x1L) phase_ladder *=-1;
-          for (int iphase = min(ia,ib)+1;iphase<max(ia,ib);++iphase)  if(( new_key[0] >>iphase )&0x1L) phase_ladder *=-1;
+//          for (int iphase = min(ic,id)+1;iphase<max(ic,id);++iphase)  if(( key[0] >>iphase )&0x1L) phase_ladder *=-1;
+//          for (int iphase = min(ia,ib)+1;iphase<max(ia,ib);++iphase)  if(( new_key[0] >>iphase )&0x1L) phase_ladder *=-1;
+          for (int iphase = min(ic,id)+1;iphase<max(ic,id);++iphase)  if( key[iphase]) phase_ladder *=-1;
+          for (int iphase = min(ia,ib)+1;iphase<max(ia,ib);++iphase)  if( new_key[iphase]) phase_ladder *=-1;
 
           tbd += amp_i * amp_f * clebsch_abcd * clebsch_ab * clebsch_cd * phasecd * phase_ladder;
+//          if (printout and abs( amp_i * amp_f * clebsch_abcd * clebsch_ab * clebsch_cd )>1e-6)
+//          {
+//             printf("  %f %f %f %f %f %d %d  =>  %f\n",amp_i , amp_f , clebsch_abcd , clebsch_ab , clebsch_cd , phasecd , phase_ladder, tbd);
+//          }
 
         }
       }
@@ -786,6 +816,7 @@ arma::mat TransitionDensity::CalcTBTD( int J_index_i, int eigvec_i, int J_index_
   int Ji = Jlist_i[J_index_i];
   int Jf = Jlist_f[J_index_f];
   if (abs(Ji-Jf)>Lambda2 or Ji+Jf<Lambda2) return tbtd;
+
 
   #pragma omp parallel for schedule(dynamic,1)
   for (size_t ibra=0;ibra<ket_J.size();++ibra)
@@ -1071,7 +1102,8 @@ void TransitionDensity::SetupKets()
 
 
 
-void TransitionDensity::Jplus(vector<vector<mvec_type>>& mvecs_in, vector<double>& amp_in, int J2, int M2)
+void TransitionDensity::Jplus(vector<key_type>& mvecs_in, vector<double>& amp_in, int J2, int M2)
+//void TransitionDensity::Jplus(vector<vector<mvec_type>>& mvecs_in, vector<double>& amp_in, int J2, int M2)
 {
   if (M2+2 > J2)
   {
@@ -1079,23 +1111,27 @@ void TransitionDensity::Jplus(vector<vector<mvec_type>>& mvecs_in, vector<double
      amp_in.clear();
      return;
   }
-  unordered_map<vector<mvec_type>,double,KeyHash> amps_out;
+  unordered_map<key_type,double,KeyHash> amps_out;
+//  unordered_map<vector<mvec_type>,double,KeyHash> amps_out;
 
   for (size_t i=0;i<mvecs_in.size();++i)
   {
     auto& mvec_in = mvecs_in[i];
     for (size_t i_m=0; i_m<m_orbits.size();++i_m)
     {
-      int iword = i_m/(sizeof(mvec_type)*8);
-      int ibit = i_m%(sizeof(mvec_type)*8);
-      if ( (not((mvec_in[iword]>>ibit)&0x1L)) or ((mvec_in[iword]>>(ibit+1))&0x1)  ) continue; // Pauli principle
+//      int iword = i_m/(sizeof(mvec_type)*8);
+//      int ibit = i_m%(sizeof(mvec_type)*8);
+//      if ( (not((mvec_in[iword]>>ibit)&0x1L)) or ((mvec_in[iword]>>(ibit+1))&0x1)  ) continue; // Pauli principle
+      if ( (not mvec_in[i_m]) or (mvec_in[i_m+1])  ) continue; // Pauli principle
       
       int j2  = m_orbits[i_m].j2;
       int mj2 = m_orbits[i_m].mj2;
       if (mj2==j2) continue;
-      vector<mvec_type> temp_mvec_out = mvec_in;
-      temp_mvec_out[iword] &= ~(0x1L << (ibit));
-      temp_mvec_out[iword] |=  (0x1L << (ibit+1));
+//      vector<mvec_type> temp_mvec_out = mvec_in;
+      key_type temp_mvec_out = mvec_in;
+//      temp_mvec_out[iword] &= ~(0x1L << (ibit));
+//      temp_mvec_out[iword] |=  (0x1L << (ibit+1));
+      temp_mvec_out.set(i_m,0).set(i_m+1,1);
       amps_out[temp_mvec_out] += sqrt( j2*(j2+2)-mj2*(mj2+2) )*0.5 * amp_in[i];
 //      if (J2==2)
 //      {
@@ -1222,7 +1258,8 @@ void TransitionDensity::WriteEGV(string fname)
     output << " " ;
     for (size_t i=0;i<mscheme_orbits.size()-n_core_orbits;++i)
     {
-      if ( (mvec[i/bits_per_word] >> (i%bits_per_word))&0x1L)
+//      if ( (mvec[i/bits_per_word] >> (i%bits_per_word))&0x1L)
+      if ( mvec[i])
           output << n_core_orbits + i+1 << " ";
     }
     output << "   ";

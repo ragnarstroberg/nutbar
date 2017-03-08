@@ -38,8 +38,8 @@ class TransitionDensity
   vector<JBasis> jbasis_list_f;
   vector<NuVec> nuvec_list_i;
   vector<NuVec> nuvec_list_f;
-  unordered_map< vector<mvec_type>, vector<vector<float>>, KeyHash > amplitudes_i;
-  unordered_map< vector<mvec_type>, vector<vector<float>>, KeyHash > amplitudes_f;
+  unordered_map< key_type, vector<vector<float>>, KeyHash > amplitudes_i;
+  unordered_map< key_type, vector<vector<float>>, KeyHash > amplitudes_f;
   unordered_map<int,int> max_states_per_J_i;
   unordered_map<int,int> max_states_per_J_f;
   vector<int> ket_a;
@@ -68,7 +68,7 @@ class TransitionDensity
   arma::mat CalcOBTD( int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int Lambda2);
   arma::mat CalcTBTD( int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int Lambda2);
   void SetupKets();
-  void Jplus(vector<vector<mvec_type>>& mvecs_in, vector<double>& amp_in, int J2, int M2);
+  void Jplus(vector<key_type>& mvecs_in, vector<double>& amp_in, int J2, int M2);
   void WriteEGV( string fname);
   void WriteTRDENS_input(string fname);
 //  void SetMaxStatesPerJ( int J2, int imax){ max_states_per_J[J2] = imax;};

@@ -57,41 +57,54 @@ void JBasis::SetupBasis( string sps_file,  vector<string> A_files, vector<string
      #ifdef VERBOSE
       cout << "  JBasis::SetupBasis -- ngood_a, ngood_b =  " << ngood_a << " , " << ngood_b << endl;
      #endif
+//      cout << "at begin, size of jmstates_a = " << jmstates_a.size() << "  and b = " << jmstates_b.size() << endl;
+      size_t offset_a = jmstates_a.size();
+      size_t offset_b = jmstates_b.size();
+      for (int i_a=0;i_a<ngood_a;++i_a)
+        jmstates_a.emplace_back( nubasis_a, nuproj_a, i_a);
+      for (int i_b=0;i_b<ngood_b;++i_b)
+        jmstates_b.emplace_back( nubasis_b, nuproj_b, i_b);
+
       for (int i_b=0;i_b<ngood_b;++i_b)
       {
-        JMState jmstate_b( nubasis_b, nuproj_b, i_b);
-        int JB = jmstate_b.J2;
+//        JMState jmstate_b( nubasis_b, nuproj_b, i_b);
+//        int JB = jmstate_b.J2;
+//        cout << "i_b: " << i_b << "  JB= " << JB << "  or " << jmstates_b[i_b+offset_b].J2 << endl;
+        int JB = jmstates_b[i_b+offset_b].J2;
         if (nubasis_b.ibf[nuproj_b.pindx[i_b]-1]<1) continue;
         for (int i_a=0;i_a<ngood_a;++i_a)
         {
-          JMState jmstate_a( nubasis_a, nuproj_a, i_a);
-          int JA = jmstate_a.J2;
+//          JMState jmstate_a( nubasis_a, nuproj_a, i_a);
+//          int JA = jmstate_a.J2;
+          int JA = jmstates_a[i_a+offset_a].J2;
           if (nubasis_a.ibf[nuproj_a.pindx[i_a]-1]<1) continue;
           if (JA+JB<J2 or abs(JA-JB)>J2) continue;
-//          cout << endl << "basis state " << basis_states.size()
-//               << "  JA,JB = " << JA << "," << JB
-//               << "  ngood = " << ngood_a << " " << ngood_b
-//               << " ibf = " << nubasis_a.ibf[nuproj_a.pindx[i_a]-1] << " " << nubasis_b.ibf[nuproj_b.pindx[i_b]-1] 
-//               << "   norm = " << jmstate_a.Norm() << " " << jmstate_b.Norm() << "  = > "
-//               << endl;
+
          #ifdef VERBOSE
           cout << "  JBasis::SetupBasis -- about to add TensorProduct( " << JA << ", " << JB << ", " << J2 << " " << M2 << " )  " << i_a << ", " << i_b << endl;
          #endif
-          basis_states.emplace_back( TensorProduct( jmstate_a, jmstate_b, J2,M2) );
+//          basis_states.emplace_back( TensorProduct( jmstate_a, jmstate_b, J2,M2) );
+//          basis_states.emplace_back( TensorProduct( jmstates_a[i_a+offset_a], jmstates_b[i_b+offset_b], J2,M2) );
+          basis_states.emplace_back( array<int,4>({ i_a+offset_a, i_b+offset_b, J2, M2 }) );
          #ifdef VERBOSE
           cout << "  JBasis::SetupBasis -- done. size of basis state = " << basis_states.back().m_coefs.size() << endl;
          #endif
-//          cout << "basis state " << basis_states.size()-1
-//               << "  JA,JB = " << JA << "," << JB
-//               << "  ngood = " << ngood_a << " " << ngood_b
-//               << " ibf = " << nubasis_a.ibf[i_a] << " " << nubasis_b.ibf[i_b] 
-//               << "   norm = " << jmstate_a.Norm() << " " << jmstate_b.Norm() << "  = > "
-//               << basis_states.back().Norm()
-//               << endl;
+
         }
       }
 
     }
   }
-//  cout << "Set up basis with Jtot = " << J2 << ". Number of basis states = " << basis_states.size() << endl;
 }
+
+
+JMState JBasis::GetBasisState(size_t index) const
+{
+  int i_a = basis_states[index][0];
+  int i_b = basis_states[index][1];
+  int J2 = basis_states[index][2];
+  int M2 = basis_states[index][3];
+  return TensorProduct( jmstates_a[i_a], jmstates_b[i_b], J2, M2 );
+//  return basis_states[index];
+}
+

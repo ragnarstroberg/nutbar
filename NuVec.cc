@@ -17,6 +17,57 @@ void NuVec::ReadFile(string fname)
  int nwords=0;
 
  ifstream infile(fname, ios::binary );
+ 
+  if (not infile.good() )
+  {
+    cout << "NuVec::ReadFile -- Trouble opening file " << fname << endl;
+    return ;
+  }
+
+
+ infile.read((char*)&nwords, DELIMITER_LENGTH);
+ if (nwords != sizeof(no_state)+sizeof(no_level))
+ {
+   cout << "NuVec::ReadFile -- Trouble in file " << fname
+        << " :  Want to read " << sizeof(no_state)+sizeof(no_level)
+        << " words, but record length is " << nwords << endl;
+   return;
+ }
+ infile.read((char*)&no_state, sizeof(no_state));
+ infile.read((char*)&no_level, sizeof(no_level));
+ infile.read((char*)&nwords, DELIMITER_LENGTH);
+
+ alpha.resize(no_level);
+ coefT.resize(no_level,vector<float>(no_state));
+
+// cout << "no_state: " << no_state << endl;
+// cout << "no_level: " << no_level << endl;
+ size_t blocksize = 2 * DELIMITER_LENGTH + no_state*sizeof(alpha[0]) + no_state*sizeof(coefT[0][0]);
+
+ for (int ilevel=0;ilevel<no_level;++ilevel)
+ {
+   infile.read((char*)&nwords, DELIMITER_LENGTH);
+   if (nwords != ( sizeof(alpha[ilevel]) + no_state*sizeof(coefT[ilevel][0]) ) )
+   {
+      cout << "NuVec::ReadFile -- Trouble in file " << fname
+           << " :  Want to read " <<  sizeof(alpha[ilevel]) + no_state*sizeof(coefT[ilevel][0])
+           << " words, but record length is " << nwords << endl;
+   }
+   infile.read((char*)&(alpha[ilevel]), sizeof(alpha[ilevel]));
+   infile.read((char*)&(coefT[ilevel][0]), no_state*sizeof(coefT[ilevel][0]));
+  
+   infile.read((char*)&nwords, DELIMITER_LENGTH);
+ }
+
+}
+
+/*
+void NuVec::ReadFile(string fname)
+{
+
+ int nwords=0;
+
+ ifstream infile(fname, ios::binary );
   if (not infile.good() )
   {
     cout << "NuVec::ReadFile -- Trouble opening file " << fname << endl;
@@ -57,6 +108,7 @@ void NuVec::ReadFile(string fname)
  }
 
 }
+*/
 
 
 void NuVec::PrintVectors()

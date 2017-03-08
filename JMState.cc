@@ -40,7 +40,7 @@ void JMState::Print() const
   float sum_coef = 0;
   for ( auto it_state : m_coefs )
   {
-    cout << fixed << setw(11) << setprecision(8) << it_state.first[0] << " :  "
+    cout << fixed << setw(11) << setprecision(8) << it_state.first << " :  "
          << fixed << setw(11) << setprecision(8) << it_state.second;
     sum_coef += it_state.second*it_state.second;
     for (int g=0;g<gwords;++g)
@@ -55,7 +55,7 @@ void JMState::Print() const
 
 }
 
-string JMState::PrintMstate(vector<mvec_type> vec_in) const
+string JMState::PrintMstate(key_type vec_in) const
 {
   ostringstream mstr;
   vector<int> spaces;
@@ -71,7 +71,7 @@ string JMState::PrintMstate(vector<mvec_type> vec_in) const
   {
     for (int ibit=spaces[ispace];ibit<spaces[ispace+1];++ibit)
     {
-      mstr << ((vec_in[0] >> ibit)&0x1L);
+      mstr << vec_in[ibit];
     }
     mstr << " ";
   }
@@ -89,20 +89,24 @@ JMState JMState::Jplus()
   {
    auto& mvec_in = it_mstate.first;
    float m_in_coef = it_mstate.second;
-   vector<vector<mvec_type>> mvec_out;
+   vector<key_type> mvec_out;
    vector<float> coefs;
    for (size_t i_m=0;i_m<m_orbits.size();++i_m)  
    {
-      int iword = i_m/(sizeof(mvec_type)*8);
-      int ibit = i_m%(sizeof(mvec_type)*8);
-      if ( (not((mvec_in[iword]>>ibit)&0x1L)) or ((mvec_in[iword]>>(ibit+1))&0x1L)  ) continue; // Pauli principle
+//      int iword = i_m/(sizeof(mvec_type)*8);
+//      int ibit = i_m%(sizeof(mvec_type)*8);
+//      if ( (not((mvec_in[iword]>>ibit)&0x1L)) or ((mvec_in[iword]>>(ibit+1))&0x1L)  ) continue; // Pauli principle
+      if ( (not mvec_in[i_m]) or (mvec_in[i_m+1])  ) continue; // Pauli principle
       
       int j2  = m_orbits[i_m].j2;
       int mj2 = m_orbits[i_m].mj2;
       if (mj2==j2) continue;
-      vector<mvec_type> temp_mvec_out = mvec_in;
-      temp_mvec_out[iword] &= ~(0x1L << (ibit));
-      temp_mvec_out[iword] |=  (0x1L << (ibit+1));
+      key_type temp_mvec_out = mvec_in;
+//      temp_mvec_out[iword] &= ~(0x1L << (ibit));
+//      temp_mvec_out[iword] |=  (0x1L << (ibit+1));
+//      temp_mvec_out &= ~(0x1L << (i_m));
+//      temp_mvec_out |=  (0x1L << (i_m+1));
+      temp_mvec_out.set(i_m,0).set(i_m+1,1);
       mvec_out.push_back( temp_mvec_out );
       coefs.push_back( sqrt( j2*(j2+2)-mj2*(mj2+2) )*0.5 );
    }
@@ -130,21 +134,25 @@ JMState JMState::Jminus()
   {
    auto& mvec_in = it_mstate.first;
    float m_in_coef = it_mstate.second;
-   vector<vector<mvec_type>> mvec_out;
+   vector<key_type> mvec_out;
    vector<float> coefs;
    for (size_t i_m=1;i_m<m_orbits.size();++i_m)  // don't bother starting with 0, since it's already in the lowest m_j state
    {
-      int iword = i_m/(sizeof(mvec_type)*8);
-      int ibit = i_m%(sizeof(mvec_type)*8);
-      if (ibit<1) continue;
-      if ( (not((mvec_in[iword]>>ibit)&0x1L)) or (mvec_in[iword]>>(ibit-1))&0x1L  ) continue; // Pauli principle
+//      int iword = i_m/(sizeof(mvec_type)*8);
+//      int ibit = i_m%(sizeof(mvec_type)*8);
+//      if (ibit<1) continue;
+//      if ( (not((mvec_in[iword]>>ibit)&0x1L)) or (mvec_in[iword]>>(ibit-1))&0x1L  ) continue; // Pauli principle
+      if ( (not mvec_in[i_m]) or mvec_in[i_m-1]  ) continue; // Pauli principle
       
       int j2  = m_orbits[i_m].j2;
       int mj2 = m_orbits[i_m].mj2;
       if (mj2==-j2) continue;
-      vector<mvec_type> temp_mvec_out = mvec_in;
-      temp_mvec_out[iword] &= ~(0x1L << (ibit));
-      temp_mvec_out[iword] |=  (0x1L << (ibit-1));
+      key_type temp_mvec_out = mvec_in;
+      temp_mvec_out.set(i_m,0).set(i_m-1,1);
+//      temp_mvec_out &= ~(0x1L << (i_m));
+//      temp_mvec_out |=  (0x1L << (i_m-1));
+//      temp_mvec_out[iword] &= ~(0x1L << (ibit));
+//      temp_mvec_out[iword] |=  (0x1L << (ibit-1));
       mvec_out.push_back( temp_mvec_out );
       coefs.push_back( sqrt( j2*(j2+2)-mj2*(mj2-2) )*0.5 );
    }
@@ -177,10 +185,10 @@ JMState JMState::TimeReverse()
    auto& mvec_in = it_mstate.first;
    float m_in_coef = it_mstate.second;
    i_m=0;
-   vector<mvec_type> mvec_out = mvec_in;
+   key_type mvec_out = mvec_in;
    while (i_m<m_orbits.size()) 
    {
-      int iword = i_m /(sizeof(mvec_type)*8);
+//      int iword = i_m /(sizeof(mvec_type)*8);
       size_t i_m_local = i_m % (sizeof(mvec_type)*8);
       int mj2 = m_orbits[i_m].mj2;
       int j2 = m_orbits[i_m].j2;
@@ -190,12 +198,15 @@ JMState JMState::TimeReverse()
         continue;
       }
       size_t i_r = i_m - mj2; // time reversed m-state << TODO: This isn't right
-      int iword_r = i_r /(sizeof(mvec_type)*8);
+//      int iword_r = i_r /(sizeof(mvec_type)*8);
       i_r = i_r %(sizeof(mvec_type)*8);
-      if ( (mvec_out[iword]>>i_m_local)&0x1L ^ (mvec_out[iword_r]>>i_r)&0x1L)
+//      if ( (mvec_out[iword]>>i_m_local)&0x1L ^ (mvec_out[iword_r]>>i_r)&0x1L)
+      if ( mvec_out[i_m] ^ mvec_out[i_r])
       {
-        mvec_out[iword] ^= (0x1L << i_m_local);
-        mvec_out[iword_r] ^= (0x1L << i_r);
+//        mvec_out[iword] ^= (0x1L << i_m_local);
+//        mvec_out[iword_r] ^= (0x1L << i_r);
+        mvec_out.flip(i_m);
+        mvec_out.flip(i_r);
       }
       i_m++;
    }
@@ -233,7 +244,7 @@ void JMState::Normalize()
 // Eliminate vectors with zero coefficients
 void JMState::EliminateZeros()
 {
-  vector<vector<mvec_type>> zero_keys;
+  vector<key_type> zero_keys;
   for ( auto& it_mstate : m_coefs)
   {
     if (abs(it_mstate.second)<1e-6)
@@ -304,7 +315,9 @@ JMState JMState::OuterProduct( const JMState& rhs ) const
   {
     for (auto& it_m2 : rhs.m_coefs)
     {
-      vector<mvec_type> key = it_m1.first + it_m2.first;
+//      key_type key = it_m1.first + it_m2.first;
+      if ( (it_m1.first & it_m2.first) != 0) continue;  // cant take an inner product if the two states share an orbit
+      key_type key = it_m1.first | it_m2.first;
       double coef = it_m1.second * it_m2.second;
       if (abs(coef)>1e-8)
         jmout.m_coefs[ key ] = coef;
@@ -330,13 +343,14 @@ JMState operator*(const double lhs, const JMState& rhs)
 }
 
 
-
-vector<mvec_type> operator+( const vector<mvec_type>& lhs, const vector<mvec_type>& rhs)
+/*
+key_type operator+( const key_type& lhs, const key_type& rhs)
 {
-  vector<mvec_type> m_out = lhs;
+  key_type m_out = lhs;
   for (size_t i=0;i<rhs.size();++i) m_out[i] += rhs[i];
   return m_out;
 }
+*/
 
 
 
@@ -362,19 +376,12 @@ JMState TensorProduct( JMState jm1, JMState jm2, int J, int M)
 
 
   // start jm1 and jm2 in the proper m states
-//  cout << "Rotating M1 to " << m1 << "  and M2 to " << m2 << endl;
-//  cout << "m1_min = " << m1_min << endl;
   jm1.RotateToM(m1);
   jm2.RotateToM(m2);
   while(jm1.M2 >= m1_min)
   {
     double clebsch = CG(jm1.J2, jm1.M2, jm2.J2, jm2.M2, J, M);
-//    if (jm1.J2 != jm2.J2 and abs(clebsch)>1e-4)
-//    {
-//      cout << "J1,J2 = " << jm1.J2 << " " << jm2.J2
-//           << "  M1 = " << jm1.M2 << "  M2 = " << jm2.M2
-//           << "   clebsch = " << clebsch << endl;
-//    }
+
     if (abs(clebsch)>1e-4)
        jmout += clebsch * ( jm1.OuterProduct(jm2) ) ;
 
