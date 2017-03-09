@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <armadillo>
 #include <unordered_map>
+#include <omp.h>
 
 #include "TransitionDensity.hh"
 #include "JMState.hh"
@@ -54,117 +55,16 @@ TransitionDensity::TransitionDensity(vector<int> jlist_i, vector<int> jlist_f)
 {}
 
 
-//void TransitionDensity::ReadInputInteractive()
-//{
-//
-//  cout << endl;
-//  cout << "Name of of NuShellFiles, (e.g. ne200): ";
-//  cout.flush();
-//  cin >> basename;
-//
-//  cout << "Name of sps file, (e.g. sdpn.sps): ";
-//  cout.flush();
-//  cin >> sps_file_name;
-//
-//  cout << "sps_file_name = " << sps_file_name << endl;
-//
-//  istringstream iss;
-//  string line;
-//
-//  cout << "J*2 values of eigenvectors (separated by space): ";
-//  cout.flush();
-//  getline(cin,line);
-//  getline(cin,line);
-//  iss.clear();
-//  iss.str(line);
-//  int j;
-//  while( iss >> j ) Jlist.push_back(j);
-//
-//
-//  cout << "Number of eigenstates for each J (separated by space, or single value if same for all J): ";
-//  cout.flush();
-//  getline(cin,line);
-//  iss.clear();
-//  iss.str(line);
-//  vector<int> spj;
-//  while( iss >> j ) spj.push_back(j);
-//  for (size_t i=0;i<Jlist.size();++i)
-//  {
-//    if (spj.size() < Jlist.size()) max_states_per_J[ Jlist[i] ] = spj[0];
-//    else                           max_states_per_J[ Jlist[i] ] = spj[i];
-//  }
-//
-//
-//  ofstream outfile("NuShelltoMBPT.input");
-//  outfile << basename << endl;
-//  outfile << sps_file_name << endl;
-//  for (auto j : Jlist) outfile << j << " ";
-//  outfile << endl;
-//  for (auto j : spj) outfile << j << " ";
-//  outfile << endl;
-//
-//
-//}
-
-
-
-//void TransitionDensity::ReadInputFromFile(string filename)
-//{
-//  ifstream infile(filename);
-//  istringstream iss;
-//
-//  string line;
-//
-//
-//  // basename for *.nba *.prj and *.xvc files
-//  getline(infile,line);
-//  iss.str(line);
-//  iss >> basename;
-//
-//  cout << "basename = " << basename << endl;
-//
-//  // basename for *.nba *.prj and *.xvc files
-//  getline(infile,line);
-//  iss.clear();
-//  iss.str(line);
-//  iss >> sps_file_name;
-//
-//  cout << "sps_file_name = " << sps_file_name << endl;
-//
-//
-//  // list of 2*J values
-//  getline(infile,line);
-//  iss.clear();
-//  iss.str(line);
-//  int j;
-//  while( iss >> j ) Jlist.push_back(j);
-//
-//  cout << "J values: ";
-//  for (auto j : Jlist) cout << j << " ";
-//  cout << endl;
-//
-//  // number of states to treat for each J
-//  getline(infile,line);
-//  iss.clear();
-//  iss.str(line);
-//  vector<int> spj;
-//  while( iss >> j ) spj.push_back(j);
-//  for (size_t i=0;i<Jlist.size();++i)
-//  {
-//    if (spj.size() < Jlist.size()) max_states_per_J[ Jlist[i] ] = spj[0];
-//    else                           max_states_per_J[ Jlist[i] ] = spj[i];
-//  }
-//
-//}
 
 
 
 
 
-//void TransitionDensity::ReadFiles( string spsfile, string abfile_base )
+
 void TransitionDensity::ReadFiles( )
 {
 
+  double t_start;
   ifstream testread; // for checking if files exist
   ostringstream ostr;
   vector<string> Afiles_i,Bfiles_i,Afiles_f,Bfiles_f;
@@ -176,8 +76,6 @@ void TransitionDensity::ReadFiles( )
   int nvalence_neutrons_i = A_i-Z_i - (Acore-Zcore);
   int nvalence_protons_f = Z_f - Zcore;
   int nvalence_neutrons_f = A_f-Z_f - (Acore-Zcore);
-//  for ( auto j : Jlist ) cout << j << " ";
-//  cout << endl;
 
 //  MJtot = (*min_element(begin(Jlist),end(Jlist)))%2;
   MJtot_i = (*min_element(begin(Jlist_i),end(Jlist_i)))%2;
@@ -198,7 +96,6 @@ void TransitionDensity::ReadFiles( )
     }
   }
   
-
 #ifdef VERBOSE
   cout << "TransitionDensity::ReadFiles -- finding all prj and nba files" << endl;
 #endif
@@ -269,6 +166,7 @@ void TransitionDensity::ReadFiles( )
   }
 
 
+  t_start = omp_get_wtime();
 #ifdef VERBOSE
   cout << "TransitionDensity::ReadFiles -- Starting loop over Jlist_i" << endl;
 #endif
@@ -322,6 +220,8 @@ void TransitionDensity::ReadFiles( )
     #endif
   }
 
+  profiler.timer["Read_initial_vectors"] += omp_get_wtime() - t_start;
+  t_start = omp_get_wtime();
 
 #ifdef VERBOSE
   cout << "TransitionDensity::ReadFiles -- Starting loop over Jlist_f" << endl;
@@ -382,6 +282,7 @@ void TransitionDensity::ReadFiles( )
     }
   }
 
+  profiler.timer["Read_final_vectors"] += omp_get_wtime() - t_start;
 
 
   m_orbits = jbasis_list_i[0].nubasis_a.m_orbits;
@@ -416,87 +317,108 @@ void TransitionDensity::ReadFiles( )
 
 }
 
-
+/// Calculate the Mscheme wave functions for each eigenstate.
+/// If the final and initial states are the same, then don't calculate it twice.
 void TransitionDensity::CalculateMschemeAmplitudes()
 {
-  for (size_t ivec=0; ivec<nuvec_list_i.size(); ++ivec)
+  CalculateMschemeAmplitudes_fi( nuvec_list_i, jbasis_list_i, max_states_per_J_i, blank_vector_i, amplitudes_i);
+  bool same_f_i = true;
+  if (basename_i != basename_f or Jlist_i.size() != Jlist_f.size()) same_f_i = false;
+  if (same_f_i)
   {
-   cout << "ivec = " << ivec << endl;
-   const auto& nuvec = nuvec_list_i[ivec];
-   const auto& jbasis = jbasis_list_i[ivec];
-   cout << "no_state = " << nuvec.no_state << endl;
-   cout << "no_level = " << nuvec.no_level << endl;
+    for (size_t iJ=0; iJ<=Jlist_i.size(); ++iJ)
+    {
+      if (Jlist_i[iJ] != Jlist_f[iJ])
+      {
+        same_f_i = false;
+        break;
+      }
+      if (max_states_per_J_i[Jlist_i[iJ]] < max_states_per_J_f[Jlist_f[iJ]])
+      {
+        same_f_i = false;
+        break;
+      }
+    }
+  }
+  if (same_f_i) amplitudes_f = amplitudes_i;
+  else
+     CalculateMschemeAmplitudes_fi( nuvec_list_f, jbasis_list_f, max_states_per_J_f, blank_vector_f, amplitudes_f);
+}
+
+
+// vec   : labels a sub-block of good J,pi
+// state : basis state with good J
+// level : eigenstate of the Hamiltonian
+//
+void TransitionDensity::CalculateMschemeAmplitudes_fi(vector<NuVec>& nuvec_list, vector<JBasis>& jbasis_list, unordered_map<int,int>& max_states_per_J, vector<vector<float>>& blank_vector, unordered_map< key_type, vector<vector<float>>, KeyHash >& amplitudes)
+{
+  double t_start = omp_get_wtime();
+  int nthreads = omp_get_max_threads();
+  for (size_t ivec=0; ivec<nuvec_list.size(); ++ivec)
+  {
+//   cout << "ivec = " << ivec << endl;
+   const auto& nuvec = nuvec_list[ivec];
+   const auto& jbasis = jbasis_list[ivec];
+//   cout << "no_state = " << nuvec.no_state << endl;
+//   cout << "no_level = " << nuvec.no_level << "  max_states_per_J = " << max_states_per_J[ivec] << endl;
+   int imax = nuvec.no_level;
+   if ( max_states_per_J.find(nuvec.J2) != max_states_per_J.end() ) imax = min(imax,max_states_per_J[nuvec.J2]);
+//   cout << "imax = " << imax << endl;
+
+
+   if (nuvec.no_state > jbasis.basis_states.size() )
+   {
+     cout << "ERROR nuvec.no_state = " << nuvec.no_state << ",  basis_states.size() = " << jbasis.basis_states.size() << endl;
+     return;
+   }
   
+   double t_start_inner = omp_get_wtime();
+   vector<unordered_map< key_type, vector<float>, KeyHash >> local_amplitudes( nthreads );
+   // give each thread a local copy of the amplitudes
    // loop over J-coupled basis states
+   // I make this loop parallel because there are typically lots of basis states,
+   // while there often may only be one ilevel and one ivec.
+   #pragma omp parallel for schedule(dynamic,1)
    for (int istate=0;istate<nuvec.no_state;++istate)
    {
-     int imax = nuvec.no_level;
-     if ( max_states_per_J_i.find(nuvec.J2) != max_states_per_J_i.end() ) imax = min(imax,max_states_per_J_i[nuvec.J2]);
-     vector<float> level_coefs(imax,0.0);
-     for (int ilevel=0;ilevel<imax;++ilevel)
-     {
-       level_coefs[ilevel] = nuvec.coefT[ilevel][istate];
-     }
-  
-     if (istate>=jbasis.basis_states.size())
-     {
-       cout << "ERROR istate = " << istate << ",  basis_states.size() = " << jbasis.basis_states.size() << endl;
-       return;
-     }
-//     const JMState& jmst = jbasis.basis_states[istate];
+     int thread_num = omp_get_thread_num();
+//     double t_getstate = omp_get_wtime();
      const JMState jmst = jbasis.GetBasisState(istate);
+//     profiler.timer["GetBasisState"] += omp_get_wtime() - t_getstate;
      for (auto& it_mstate : jmst.m_coefs)
      {
        auto& key = it_mstate.first;
        const float& m_coef = it_mstate.second;
-       if( amplitudes_i.find(key) == amplitudes_i.end() ) amplitudes_i[key] = blank_vector_i;
-       amplitudes_i[key][ivec] += m_coef * level_coefs;
+
+       if( local_amplitudes[thread_num].find(key) == local_amplitudes[thread_num].end() ) local_amplitudes[thread_num][key] = vector<float>(imax,0.);
+       for (size_t ilevel=0;ilevel<imax;++ilevel) local_amplitudes[thread_num][key][ilevel] += m_coef * nuvec.coefT[ilevel][istate];
      }
    }
-  }
+   profiler.timer["amplitudes_calc"] += omp_get_wtime() - t_start_inner;
+   t_start_inner = omp_get_wtime();
 
-  // copy and paste code: easy to implement, hard to maintain...
-  for (size_t ivec=0; ivec<nuvec_list_f.size(); ++ivec)
-  {
-   cout << "ivec = " << ivec << endl;
-   const auto& nuvec = nuvec_list_f[ivec];
-   const auto& jbasis = jbasis_list_f[ivec];
-   cout << "no_state = " << nuvec.no_state << endl;
-   cout << "no_level = " << nuvec.no_level << endl;
-  
-   // loop over J-coupled basis states
-   for (int istate=0;istate<nuvec.no_state;++istate)
+   // Now accumulate amplitudes from all threads
    {
-     int imax = nuvec.no_level;
-     if ( max_states_per_J_f.find(nuvec.J2) != max_states_per_J_f.end() ) imax = min(imax,max_states_per_J_f[nuvec.J2]);
-     vector<float> level_coefs(imax,0.0);
-     for (int ilevel=0;ilevel<imax;++ilevel)
+     for (int ith=0;ith<nthreads;++ith)
      {
-       level_coefs[ilevel] = nuvec.coefT[ilevel][istate];
-     }
-  
-     if (istate>=jbasis.basis_states.size())
-     {
-       cout << "ERROR istate = " << istate << ",  basis_states.size() = " << jbasis.basis_states.size() << endl;
-       return;
-     }
-//     const JMState& jmst = jbasis.basis_states[istate];
-     const JMState jmst = jbasis.GetBasisState(istate);
-     for (auto& it_mstate : jmst.m_coefs)
-     {
-       auto& key = it_mstate.first;
-       const float& m_coef = it_mstate.second;
-       if( amplitudes_f.find(key) == amplitudes_f.end() ) amplitudes_f[key] = blank_vector_f;
-//       amplitudes_f[key][ivec] += m_coef * level_coefs;
-      for (size_t ilevel=0;ilevel<imax;++ilevel) amplitudes_f[key][ivec][ilevel] += m_coef * level_coefs[ilevel];
+       for (auto& it_amp : local_amplitudes[ith] )
+       {
+         auto& key = it_amp.first;
+         if( amplitudes.find(key) == amplitudes.end() ) amplitudes[key] = blank_vector;
+         for (size_t ilevel=0;ilevel<imax;++ilevel) amplitudes[key][ivec][ilevel] +=  it_amp.second[ilevel];
+       }
      }
    }
+   profiler.timer["amplitudes_accumulate"] += omp_get_wtime() - t_start_inner;
   }
 
+  profiler.timer["CalculateMschemeAmplitudes"] += omp_get_wtime() - t_start;
 }
 
 
 
+
+/// Calculate a single one body transition density
 double TransitionDensity::OBTD(int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int m_index_a, int m_index_b, int Lambda2 )
 {
 
@@ -609,8 +531,7 @@ double TransitionDensity::OBTD(int J_index_i, int eigvec_i, int J_index_f, int e
 
 
 
-
-
+/// Calculate a single two body transition density
 double TransitionDensity::TBTD(int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int m_index_a, int m_index_b, int m_index_c, int m_index_d, int J2ab, int J2cd, int Lambda2 )
 {
 
@@ -774,8 +695,7 @@ double TransitionDensity::TBTD(int J_index_i, int eigvec_i, int J_index_f, int e
 arma::mat TransitionDensity::CalcOBTD( int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int Lambda2)
 {
 
-//  cout << "Begin TransitionDensity::CalcOBTD( " << J_index_i << ", " << eigvec_i << ", " << J_index_f << ", " << eigvec_f << ", " << Lambda2 << " )" << endl;
-
+  double t_start = omp_get_wtime();
 
   int Ji = Jlist_i[J_index_i];
   int Jf = Jlist_f[J_index_f];
@@ -798,6 +718,7 @@ arma::mat TransitionDensity::CalcOBTD( int J_index_i, int eigvec_i, int J_index_
     }
   }
 
+  profiler.timer["CalcOBTD"] += omp_get_wtime() - t_start;
   return obtd;
 
 }
@@ -809,6 +730,7 @@ arma::mat TransitionDensity::CalcOBTD( int J_index_i, int eigvec_i, int J_index_
 arma::mat TransitionDensity::CalcTBTD( int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int Lambda2)
 {
 
+  double t_start = omp_get_wtime();
   // generate all the two body states that are needed
    SetupKets();
 
@@ -841,6 +763,7 @@ arma::mat TransitionDensity::CalcTBTD( int J_index_i, int eigvec_i, int J_index_
       }
     }
   }
+  profiler.timer["CalcTBTD"] += omp_get_wtime() - t_start;
   return tbtd;
 }
 

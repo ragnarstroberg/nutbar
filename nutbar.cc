@@ -19,6 +19,7 @@
 #include "JMState.hh"
 #include "JBasis.hh"
 #include "TransitionDensity.hh"
+#include "Profiler.hh"
 
 
 using namespace std;
@@ -51,6 +52,7 @@ int main(int argc, char** argv)
 {
 
   // TransitionDensity class does all the heavy lifting
+  Profiler profiler;
   TransitionDensity trans;
   
   Settings settings;
@@ -70,12 +72,6 @@ int main(int argc, char** argv)
   cout << " ]" << endl; 
  
 
-//  if (settings.basename_vectors_i != settings.basename_vectors_f)
-//  {
-//    cout << "ERROR. I haven't implemented transitions between different nuclei yet." << endl;
-//    return 1;
-//  }
-
   // Some shuffling around to put things in the TransitionDensity class format
   // this should really be done in a much neater way
   trans.basename_i = settings.basename_vectors_i;
@@ -91,39 +87,24 @@ int main(int argc, char** argv)
   {
     trans.max_states_per_J_f[settings.J2_f[i]] = settings.NJ_f[i];
   }
-//  for (size_t i=0;i<settings.J2_f.size(); ++i)
-//  {
-//    auto iter = find( begin(trans.Jlist), end(trans.Jlist), settings.J2_f[i]);
-//    if ( iter == end(trans.Jlist) )
-//    {
-//      trans.Jlist.push_back(settings.J2_f[i]);
-//      trans.max_states_per_J[settings.J2_f[i]] = settings.NJ_f[i];
-//    }
-//    else
-//    {
-//      int k = iter - begin(trans.Jlist);
-//      trans.max_states_per_J[settings.J2_f[i]] = max( trans.max_states_per_J[settings.J2_f[i]], settings.NJ_f[i]);
-//    }
-//  }
-  
-  
-  
-  #ifdef VERBOSE
+
+
+#ifdef VERBOSE 
     cout << "Reading Files" << endl;
-  #endif
+#endif
   trans.ReadFiles();
-  #ifdef VERBOSE
+#ifdef VERBOSE
     cout << "done reading files." << endl;
     cout << "CalculateMschemeAmplitudes()" << endl;
-  #endif
+#endif
   
   trans.CalculateMschemeAmplitudes();
 
-  #ifdef VERBOSE
+#ifdef VERBOSE
     cout << "done calculating Mscheme amplitudes." << endl;
     cout << "number of initial m-scheme states: " << trans.amplitudes_i.size() << " x " << trans.blank_vector_i.size()<< endl;
     cout << "number of final m-scheme states: " << trans.amplitudes_f.size() << " x " << trans.blank_vector_f.size()<< endl;
-  #endif
+#endif
   
 //  if (settings.write_egv)
   if ( find( begin(settings.options), end(settings.options), "egv")  != end(settings.options))
@@ -402,7 +383,7 @@ int main(int argc, char** argv)
 
 
 
-
+  profiler.PrintAll();
 
   return 0;
 }

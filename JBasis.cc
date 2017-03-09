@@ -58,8 +58,10 @@ void JBasis::SetupBasis( string sps_file,  vector<string> A_files, vector<string
       cout << "  JBasis::SetupBasis -- ngood_a, ngood_b =  " << ngood_a << " , " << ngood_b << endl;
      #endif
 //      cout << "at begin, size of jmstates_a = " << jmstates_a.size() << "  and b = " << jmstates_b.size() << endl;
-      size_t offset_a = jmstates_a.size();
-      size_t offset_b = jmstates_b.size();
+      int offset_a = jmstates_a.size();
+      int offset_b = jmstates_b.size();
+//      size_t offset_a = jmstates_a.size();
+//      size_t offset_b = jmstates_b.size();
       for (int i_a=0;i_a<ngood_a;++i_a)
         jmstates_a.emplace_back( nubasis_a, nuproj_a, i_a);
       for (int i_b=0;i_b<ngood_b;++i_b)

@@ -4,6 +4,7 @@
 #include <sstream>
 #include <bitset>
 #include <gsl/gsl_sf_coupling.h>
+#include <omp.h>
 
 #include "JMState.hh"
 
@@ -93,28 +94,22 @@ JMState JMState::Jplus()
    vector<float> coefs;
    for (size_t i_m=0;i_m<m_orbits.size();++i_m)  
    {
-//      int iword = i_m/(sizeof(mvec_type)*8);
-//      int ibit = i_m%(sizeof(mvec_type)*8);
-//      if ( (not((mvec_in[iword]>>ibit)&0x1L)) or ((mvec_in[iword]>>(ibit+1))&0x1L)  ) continue; // Pauli principle
       if ( (not mvec_in[i_m]) or (mvec_in[i_m+1])  ) continue; // Pauli principle
       
       int j2  = m_orbits[i_m].j2;
       int mj2 = m_orbits[i_m].mj2;
       if (mj2==j2) continue;
       key_type temp_mvec_out = mvec_in;
-//      temp_mvec_out[iword] &= ~(0x1L << (ibit));
-//      temp_mvec_out[iword] |=  (0x1L << (ibit+1));
-//      temp_mvec_out &= ~(0x1L << (i_m));
-//      temp_mvec_out |=  (0x1L << (i_m+1));
       temp_mvec_out.set(i_m,0).set(i_m+1,1);
-      mvec_out.push_back( temp_mvec_out );
-      coefs.push_back( sqrt( j2*(j2+2)-mj2*(mj2+2) )*0.5 );
+//      mvec_out.push_back( temp_mvec_out );
+//      coefs.push_back( sqrt( j2*(j2+2)-mj2*(mj2+2) )*0.5 );
+      jmout.m_coefs[ temp_mvec_out ] += m_in_coef * sqrt( j2*(j2+2)-mj2*(mj2+2) )*0.5;
    }
 
-   for (size_t i=0;i<coefs.size();i++)
-   {
-      jmout.m_coefs[mvec_out[i]] += m_in_coef * coefs[i];
-   }
+//   for (size_t i=0;i<coefs.size();i++)
+//   {
+//      jmout.m_coefs[mvec_out[i]] += m_in_coef * coefs[i];
+//   }
   }
   jmout.EliminateZeros();
   jmout.Normalize();
@@ -138,10 +133,6 @@ JMState JMState::Jminus()
    vector<float> coefs;
    for (size_t i_m=1;i_m<m_orbits.size();++i_m)  // don't bother starting with 0, since it's already in the lowest m_j state
    {
-//      int iword = i_m/(sizeof(mvec_type)*8);
-//      int ibit = i_m%(sizeof(mvec_type)*8);
-//      if (ibit<1) continue;
-//      if ( (not((mvec_in[iword]>>ibit)&0x1L)) or (mvec_in[iword]>>(ibit-1))&0x1L  ) continue; // Pauli principle
       if ( (not mvec_in[i_m]) or mvec_in[i_m-1]  ) continue; // Pauli principle
       
       int j2  = m_orbits[i_m].j2;
@@ -149,18 +140,15 @@ JMState JMState::Jminus()
       if (mj2==-j2) continue;
       key_type temp_mvec_out = mvec_in;
       temp_mvec_out.set(i_m,0).set(i_m-1,1);
-//      temp_mvec_out &= ~(0x1L << (i_m));
-//      temp_mvec_out |=  (0x1L << (i_m-1));
-//      temp_mvec_out[iword] &= ~(0x1L << (ibit));
-//      temp_mvec_out[iword] |=  (0x1L << (ibit-1));
-      mvec_out.push_back( temp_mvec_out );
-      coefs.push_back( sqrt( j2*(j2+2)-mj2*(mj2-2) )*0.5 );
+//      mvec_out.push_back( temp_mvec_out );
+//      coefs.push_back( sqrt( j2*(j2+2)-mj2*(mj2-2) )*0.5 );
+      jmout.m_coefs[ temp_mvec_out ] += m_in_coef * sqrt( j2*(j2+2)-mj2*(mj2-2) )*0.5;
    }
 
-   for (size_t i=0;i<coefs.size();i++)
-   {
-      jmout.m_coefs[mvec_out[i]] += m_in_coef * coefs[i];
-   }
+//   for (size_t i=0;i<coefs.size();i++)
+//   {
+//      jmout.m_coefs[mvec_out[i]] += m_in_coef * coefs[i];
+//   }
   }
 
   jmout.EliminateZeros();
@@ -309,22 +297,20 @@ float JMState::Norm() const
 
 JMState JMState::OuterProduct( const JMState& rhs ) const
 {
-  JMState jmout(*this);
+  JMState jmout;
+//  JMState jmout(*this);
   jmout.m_coefs.clear();
   for (auto& it_m1 : m_coefs)
   {
     for (auto& it_m2 : rhs.m_coefs)
     {
-//      key_type key = it_m1.first + it_m2.first;
-      if ( (it_m1.first & it_m2.first) != 0) continue;  // cant take an inner product if the two states share an orbit
-      key_type key = it_m1.first | it_m2.first;
+      if ( (it_m1.first & it_m2.first) != 0) continue;  // cant take an outer product if the two states share an orbit
       double coef = it_m1.second * it_m2.second;
       if (abs(coef)>1e-8)
+      {
+        key_type key = it_m1.first | it_m2.first;
         jmout.m_coefs[ key ] = coef;
-//      if (J2 != rhs.J2)
-//      {
-//        cout << it_m1.first[0] << "  (" << (it_m1.first[0] >>12) << ")  " << it_m2.first[0] << "  " << it_m1.second << " " << it_m2.second << endl;
-//      }
+      }
     }
   }
   return jmout;
@@ -343,16 +329,6 @@ JMState operator*(const double lhs, const JMState& rhs)
 }
 
 
-/*
-key_type operator+( const key_type& lhs, const key_type& rhs)
-{
-  key_type m_out = lhs;
-  for (size_t i=0;i<rhs.size();++i) m_out[i] += rhs[i];
-  return m_out;
-}
-*/
-
-
 
 // Clebsch-Gordan coefficient
 double CG(int j2a, int m2a, int j2b, int m2b, int J2, int M2)
@@ -368,27 +344,37 @@ JMState TensorProduct( JMState jm1, JMState jm2, int J, int M)
   int m2 = M-m1;
   int m1_min = max(-jm1.J2, M-jm2.J2);
 
-  JMState jmout(jm1);
-  jmout.m_coefs.clear();
+//  JMState jmout(jm1);
+//  jmout.m_coefs.clear();
+  JMState jmout;
   jmout.SetJ(J);
   jmout.SetM(M);
+  for (auto p : jm1.pindx) jmout.pindx.push_back(p);
   for (auto p : jm2.pindx) jmout.pindx.push_back(p);
 
 
   // start jm1 and jm2 in the proper m states
   jm1.RotateToM(m1);
   jm2.RotateToM(m2);
+
   while(jm1.M2 >= m1_min)
   {
     double clebsch = CG(jm1.J2, jm1.M2, jm2.J2, jm2.M2, J, M);
 
+//  t_start = omp_get_wtime();
     if (abs(clebsch)>1e-4)
        jmout += clebsch * ( jm1.OuterProduct(jm2) ) ;
+//  jm1.profiler.timer["OuterProduct"] += omp_get_wtime() - t_start;
 
+//  t_start = omp_get_wtime();
     jm1 = jm1.Jminus();
+//  jm1.profiler.timer["jm1_minus"] += omp_get_wtime() - t_start;
+//  t_start = omp_get_wtime();
     jm2 = jm2.Jplus();
+//  jm1.profiler.timer["jm2_plus"] += omp_get_wtime() - t_start;
     if (jm2.M2 > jm2.J2) break;
   }
+
   return jmout;
 
 }

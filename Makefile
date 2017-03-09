@@ -12,14 +12,14 @@ FLAGS += -DNOBOOST
 
 
 ifeq ($(DEBUG),on)
-  FLAGS += -g
+  FLAGS += -g -DVERBOSE
 endif
 
 ifeq ($(VERBOSE),on)
   FLAGS += -DVERBOSE
 endif
 
-OBJ = NuVec.o NuBasis.o NuProj.o JMState.o JBasis.o TransitionDensity.o
+OBJ = NuVec.o NuBasis.o NuProj.o JMState.o JBasis.o TransitionDensity.o Profiler.o
 EXE = nutbar
 #EXE = nutbar_test
 

@@ -4,6 +4,7 @@
 #ifndef JMState_h
 #include "NuBasis.hh"
 #include "NuProj.hh"
+#include "Profiler.hh"
 #include <vector>
 #include <string>
 #include <unordered_map>
@@ -32,6 +33,7 @@ class JMState
 //  unordered_map<vector<mvec_type>,float,KeyHash> m_coefs;
   unordered_map<key_type,float,KeyHash> m_coefs;
   vector<MschemeOrbit> m_orbits;
+  Profiler profiler;
 
   JMState();
   JMState(const JMState&)=default;

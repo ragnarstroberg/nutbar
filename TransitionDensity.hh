@@ -6,6 +6,7 @@
 #include "NuVec.hh"
 #include "JMState.hh"
 #include "JBasis.hh"
+#include "Profiler.hh"
 
 #include <vector>
 #include <armadillo>
@@ -47,6 +48,7 @@ class TransitionDensity
   vector<int> ket_J;
   static vector<char> an_code;
   static vector<string> periodic_table;
+  Profiler profiler;
 
 
   TransitionDensity();
@@ -56,6 +58,7 @@ class TransitionDensity
 //  void ReadInputInteractive();
   void ReadFiles( );
   void CalculateMschemeAmplitudes();
+  void CalculateMschemeAmplitudes_fi(vector<NuVec>& , vector<JBasis>& , unordered_map<int,int>&, vector<vector<float>>&, unordered_map< key_type, vector<vector<float>>, KeyHash >& );
   void SetAZ(int a, int z){A_i=a;Z_i=z;A_f=a;Z_f=a;};
   void SetAZ_i(int a, int z){A_i=a;Z_i=z;};
   void SetAZ_f(int a, int z){A_f=a;Z_f=z;};
