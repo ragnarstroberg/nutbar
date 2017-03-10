@@ -98,7 +98,8 @@ int main(int argc, char** argv)
     cout << "CalculateMschemeAmplitudes()" << endl;
 #endif
   
-  trans.CalculateMschemeAmplitudes();
+  if ( find( begin(settings.options), end(settings.options), "read_dens") == end(settings.options)  )
+    trans.CalculateMschemeAmplitudes();
 
 #ifdef VERBOSE
     cout << "done calculating Mscheme amplitudes." << endl;
@@ -156,7 +157,6 @@ int main(int argc, char** argv)
 
   for (size_t i=0; i<settings.scalar_op_files.size();++i)
   {
-//      cout << "reading scalar transition operator " << settings.scalar_op_files[i] << endl;
       trans.GetScalarTransitionOperator(settings.scalar_op_files[i],OpScalar0b[i],OpScalar1b[i],OpScalar2b[i]);
       ScalarME1[i] = arma::field<arma::mat>(settings.J2_f.size(),settings.J2_i.size() );
       ScalarME2[i] = arma::field<arma::mat>(settings.J2_f.size(),settings.J2_i.size() );
@@ -164,122 +164,73 @@ int main(int argc, char** argv)
  
 
 
-  ofstream densout("nutbar_densities.dat");
-  densout << "# One and two body transition densities" << endl << "#" << endl;
-  densout << "# One-body basis:" << endl;
-  densout << "# i   n   l   2j  2tz (proton=+1)" << endl;
-  for (size_t i=0;i<trans.jorbits.size();++i)
-  {
-    auto morb = trans.m_orbits[trans.jorbits[i]];
-    densout << setw(3) << i << " " << setw(3) << morb.n << " " << setw(3) << morb.l2/2 << " "
-            << setw(3) << morb.j2 << " " << setw(3) << morb.tz2 << endl;
-  }
-
   trans.SetupKets();
-  densout << "# Two-body basis: " << endl;
-  densout << "# i   a   b   J" << endl;
-  for (size_t i=0;i<trans.ket_a.size();++i)
-  {
-    densout << setw(3) << i << " " << setw(3) << trans.ket_a[i] << " " << setw(3) << trans.ket_b[i] << " " << setw(3) << trans.ket_J[i]/2 << endl;
-  }
 
+  if ( find( begin(settings.options), end(settings.options), "read_dens") == end(settings.options)  )
+    trans.SetDensFile("nutbar_densities.dat");
  
   for (size_t Ji=0;Ji<settings.J2_i.size();++Ji )
   {
    for (size_t Jf=0;Jf<settings.J2_f.size();++Jf )
    {
-    TensorME1(Jf,Ji).zeros(settings.NJ_f[Jf],settings.NJ_i[Ji]);
-    TensorME2(Jf,Ji).zeros(settings.NJ_f[Jf],settings.NJ_i[Ji]);
-    if ( abs(settings.J2_i[Ji] - settings.J2_f[Jf])> 2*Lambda) continue;
-    if (Jf==Ji)
-    {
-      for (size_t isc=0; isc<OpScalar1b.size();++isc)
-      {
-         ScalarME1[isc](Jf,Ji).zeros(settings.NJ_f[Jf],settings.NJ_i[Ji]);
-         ScalarME2[isc](Jf,Ji).zeros(settings.NJ_f[Jf],settings.NJ_i[Ji]);
-      }
-    }
-    for (int ivec = 0; ivec<settings.NJ_i[Ji]; ++ivec)
-    {
-     for (int fvec = 0; fvec<settings.NJ_f[Jf]; ++fvec)
+     TensorME1(Jf,Ji).zeros(settings.NJ_f[Jf],settings.NJ_i[Ji]);
+     TensorME2(Jf,Ji).zeros(settings.NJ_f[Jf],settings.NJ_i[Ji]);
+     if ( abs(settings.J2_i[Ji] - settings.J2_f[Jf])> 2*Lambda) continue;
+     if (Jf==Ji)
      {
-      if (settings.basename_vectors_i == settings.basename_vectors_f)
-      {
-       if ( settings.J2_i[Ji]==settings.J2_f[Jf] and fvec>ivec) continue;
-       if ( ( find( begin(settings.options), end(settings.options), "diag") != end(settings.options)) and not( settings.J2_i[Ji]==settings.J2_f[Jf] and ivec==fvec))  continue;
-      }
-//      cout << endl << endl << "xxxxxxxxxxxxxxxxxx and here I find myself. " << settings.J2_i[Ji] << " " << ivec << " ->  " << settings.J2_f[Jf] << " " << fvec << endl;
-      arma::mat obtd,tbtd;
-        obtd = trans.CalcOBTD(Ji,ivec,Jf,fvec,Lambda*2);
-        if (Lambda==0) obtd /= sqrt( trans.Jlist_i[Ji]+1.);
-//        cout << "Size of obtd = " << obtd.n_rows << "x" << obtd.n_cols << endl;
-        densout << endl;
-        densout << "Jf nJf  Ji nJi = " << setw(3) << setprecision(1) << settings.J2_f[Jf]*0.5 << " " << fvec+1
-                << "    " << setw(3) << setprecision(1) << settings.J2_i[Ji]*0.5 << " " << ivec+1  << endl;
-        densout << "-------------- OBTD ---------------------" << endl;
-        for (size_t i=0;i<obtd.n_rows;++i)
-        {
-          for (size_t j=0;j<obtd.n_cols;++j)
-          {
-             if (abs(obtd(i,j))>1e-7)
-             densout << setw(3) << i << " " << setw(3) << j << " "  << setw(12) << fixed << setprecision(8) << obtd(i,j) << endl;
-          }
-        }
-       
-      if (settings.tensor_op_files.size()>0)
-      {
-        double obme = arma::accu( TensorOp1b % obtd );
-        TensorME1(Jf,Ji)(fvec,ivec) = obme;
-      }
-      
-      tbtd = trans.CalcTBTD(Ji,ivec,Jf,fvec,Lambda*2);
-      if (Lambda==0) tbtd /= sqrt( trans.Jlist_i[Ji]+1.);
-      densout << endl;
-      densout << "-------------- TBTD ---------------------" << endl;
-      for (size_t i=0;i<tbtd.n_rows;++i)
-      {
-        for (size_t j=0;j<tbtd.n_cols;++j)
-        {
-           if (abs(tbtd(i,j))>1e-7)
-           densout << setw(3) << i << " " << setw(3) << j << " "  << setw(12) << fixed << setprecision(8) << tbtd(i,j) << endl;
-        }
-      }
-
-      if (settings.tensor_op_files.size()>1)
-      {
-        double tbme = arma::accu( TensorOp2b % tbtd);
-        TensorME2(Jf,Ji)(fvec,ivec) = tbme;
-      }
-  
-      if (settings.J2_i[Ji]==settings.J2_f[Jf] and OpScalar1b.size()>0)
-      {
-//        obtd = trans.CalcOBTD(Ji,ivec,Jf,fvec,0) / sqrt(trans.Jlist_i[Ji]+1.);
-//        tbtd = trans.CalcTBTD(Ji,ivec,Jf,fvec,0) / sqrt(trans.Jlist_i[Ji]+1.) ;
-//        arma::mat occ_op(obtd.n_rows,obtd.n_cols);
-//        for (int i=0;i<occ_op.n_rows;++i)
-//        {
-//          occ_op(i,i) = sqrt( trans.m_orbits[trans.jorbits[i]].j2 + 1.);
-//        }
-//        double sum_occ=0;
-//        occ_op = occ_op % obtd;
-//        cout << "occupations:";
-//        cout << occ_op.diag().t();
-//        cout << "   sum = " << arma::sum(occ_op.diag())  << endl;
-  
-  
-        for (size_t iop=0; iop<OpScalar1b.size(); ++iop)
-        {
-          double scop1 = arma::accu( OpScalar1b[iop] % obtd ) ;
-          double scop2 = arma::accu( OpScalar2b[iop] % tbtd ) ;
-          ScalarME1[iop](Jf,Ji)(fvec,ivec) = scop1;
-          ScalarME2[iop](Jf,Ji)(fvec,ivec) = scop2;
-//          cout << " Scalar Operator " << settings.scalar_op_files[iop] << ":" << endl;
-//          cout << " <Op1b>" << scop1  << endl;
-//          cout << " <Op2b>" << scop2 << endl;
-//          cout << " <Op1b+2b>" << scop1+scop2 << endl;
-        }
-      }
+       for (size_t isc=0; isc<OpScalar1b.size();++isc)
+       {
+          ScalarME1[isc](Jf,Ji).zeros(settings.NJ_f[Jf],settings.NJ_i[Ji]);
+          ScalarME2[isc](Jf,Ji).zeros(settings.NJ_f[Jf],settings.NJ_i[Ji]);
+       }
      }
+     for (int ivec = 0; ivec<settings.NJ_i[Ji]; ++ivec)
+     {
+      for (int fvec = 0; fvec<settings.NJ_f[Jf]; ++fvec)
+      {
+       if (settings.basename_vectors_i == settings.basename_vectors_f)
+       {
+        if ( settings.J2_i[Ji]==settings.J2_f[Jf] and fvec>ivec) continue;
+        if ( ( find( begin(settings.options), end(settings.options), "diag") != end(settings.options)) and not( settings.J2_i[Ji]==settings.J2_f[Jf] and ivec==fvec))  continue;
+       }
+       arma::mat obtd,tbtd;
+       if ( find( begin(settings.options), end(settings.options), "read_dens") != end(settings.options) )
+       {
+         cout << "Reading densities from file..." << endl;
+         obtd = trans.ReadOBTD(Ji,ivec,Jf,fvec,Lambda*2,"nutbar_densities.dat");
+         tbtd = trans.ReadTBTD(Ji,ivec,Jf,fvec,Lambda*2,"nutbar_densities.dat");
+       }
+       else
+       {
+         cout << "calculating it myself..." << endl;
+         obtd = trans.CalcOBTD(Ji,ivec,Jf,fvec,Lambda*2);
+         tbtd = trans.CalcTBTD(Ji,ivec,Jf,fvec,Lambda*2);
+       }
+ 
+       if (settings.tensor_op_files.size()>0)
+       {
+         double obme = arma::accu( TensorOp1b % obtd );
+         TensorME1(Jf,Ji)(fvec,ivec) = obme;
+       }
+       
+       if (settings.tensor_op_files.size()>1)
+       {
+         double tbme = arma::accu( TensorOp2b % tbtd);
+         TensorME2(Jf,Ji)(fvec,ivec) = tbme;
+       }
+  
+       if (settings.J2_i[Ji]==settings.J2_f[Jf] and OpScalar1b.size()>0)
+       {
+
+         for (size_t iop=0; iop<OpScalar1b.size(); ++iop)
+         {
+           double scop1 = arma::accu( OpScalar1b[iop] % obtd ) ;
+           double scop2 = arma::accu( OpScalar2b[iop] % tbtd ) ;
+           ScalarME1[iop](Jf,Ji)(fvec,ivec) = scop1;
+           ScalarME2[iop](Jf,Ji)(fvec,ivec) = scop2;
+         }
+       }
+      }
     }
    }
   }

@@ -41,17 +41,17 @@ vector<string> TransitionDensity::periodic_table = {
 
 
 TransitionDensity::TransitionDensity()
-: total_number_levels_i(0),total_number_levels_f(0)
+: total_number_levels_i(0),total_number_levels_f(0),densfile_name("none")
 {}
 
 TransitionDensity::TransitionDensity(vector<int> jlist)
 :total_number_levels_i(0),total_number_levels_f(0),
- Jlist_i(jlist), Jlist_f(jlist)
+ Jlist_i(jlist), Jlist_f(jlist),densfile_name("none")
 {}
 
 TransitionDensity::TransitionDensity(vector<int> jlist_i, vector<int> jlist_f)
 :total_number_levels_i(0),total_number_levels_f(0),
- Jlist_i(jlist_i), Jlist_f(jlist_f)
+ Jlist_i(jlist_i), Jlist_f(jlist_f),densfile_name("none")
 {}
 
 
@@ -701,6 +701,16 @@ arma::mat TransitionDensity::CalcOBTD( int J_index_i, int eigvec_i, int J_index_
   int Jf = Jlist_f[J_index_f];
   size_t njorb = jorbits.size();
   arma::mat obtd(njorb,njorb,arma::fill::zeros);
+  ofstream densout( densfile_name, ios::app );
+  if ( densfile_name != "none")
+  {
+     densout << endl;
+     densout << "Jf nJf  Ji nJi  Lambda = " << setw(3) << setprecision(1) << Jf*0.5 << " " << J_index_f+1
+             << "    " << setw(3) << setprecision(1) << Ji*0.5 << " " << J_index_i+1
+             << "    " << setw(3) << setprecision(1) << Lambda2*0.5  << endl;
+     densout << "-------------- OBTD ---------------------" << endl;
+  }
+
   for (size_t i=0; i<njorb; ++i)
   {
     int j2i = m_orbits[jorbits[i]].j2;
@@ -710,6 +720,12 @@ arma::mat TransitionDensity::CalcOBTD( int J_index_i, int eigvec_i, int J_index_
     for (size_t j=jmin; j<njorb; ++j)
     {
       obtd(i,j) = OBTD( J_index_i, eigvec_i, J_index_f, eigvec_f, jorbits[i], jorbits[j], Lambda2);
+      if (Lambda2 == 0)  obtd(i,j) /= sqrt( Ji+1 );
+
+      if (densfile_name != "none" and abs(obtd(i,j))>1e-7)
+      {
+         densout << setw(3) << i << " " << setw(3) << j << " "  << setw(12) << fixed << setprecision(8) << obtd(i,j)  << endl;
+      }
       if (basename_i==basename_f and Ji==Jf and eigvec_i==eigvec_f)
       {
         int j2j = m_orbits[jorbits[j]].j2;
@@ -718,10 +734,12 @@ arma::mat TransitionDensity::CalcOBTD( int J_index_i, int eigvec_i, int J_index_
     }
   }
 
+  densout.close();
   profiler.timer["CalcOBTD"] += omp_get_wtime() - t_start;
   return obtd;
 
 }
+
 
 
 
@@ -763,7 +781,128 @@ arma::mat TransitionDensity::CalcTBTD( int J_index_i, int eigvec_i, int J_index_
       }
     }
   }
+
+  if (Lambda2==0) tbtd /= sqrt( Ji+1.);
+  if ( densfile_name != "none" )
+  {
+    ofstream densout(densfile_name, ios::app);
+    densout << endl;
+    densout << "-------------- TBTD ---------------------" << endl;
+    for (size_t i=0;i<tbtd.n_rows;++i)
+    {
+      for (size_t j=0;j<tbtd.n_cols;++j)
+      {
+         if (abs(tbtd(i,j))>1e-7)
+         densout << setw(3) << i << " " << setw(3) << j << " "  << setw(12) << fixed << setprecision(8) << tbtd(i,j) << endl;
+      }
+    }
+    densout.close();
+  }
+
   profiler.timer["CalcTBTD"] += omp_get_wtime() - t_start;
+  return tbtd;
+}
+
+
+
+arma::mat TransitionDensity::ReadOBTD( int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int Lambda2, string fname)
+{
+  bool found_it = false;
+  int Ji = Jlist_i[J_index_i];
+  int Jf = Jlist_f[J_index_f];
+  size_t njorb = jorbits.size();
+  ifstream densfile(fname);
+  string line;
+  ostringstream line_to_find;
+  line_to_find <<  "Jf nJf  Ji nJi  Lambda = "   << setw(3) << setprecision(1) << Jf*0.5 << " " << J_index_f+1
+          << "    " << setw(3) << setprecision(1) << Ji*0.5 << " " << J_index_i+1
+          << "    " << setw(3) << setprecision(1) << Lambda2*0.5;
+
+
+  while ( getline( densfile, line) )
+  {
+     if( line == line_to_find.str() )
+     {
+       found_it = true;
+       break;
+     }
+  }
+  while ( getline( densfile, line) )
+  {
+     if( line == "-------------- OBTD ---------------------" ) break;
+  }
+  arma::mat obtd(njorb,njorb,arma::fill::zeros);
+  int i,j;
+  double obd;
+  while ( line.size() > 2 )
+  {
+    getline( densfile, line );
+    istringstream(line) >> i >> j >> obd;
+    obtd(i,j) = obd;
+    if (basename_i==basename_f and Ji==Jf and eigvec_i==eigvec_f)
+    {
+      int j2i = m_orbits[jorbits[i]].j2;
+      int j2j = m_orbits[jorbits[j]].j2;
+      obtd(j,i) = (1-abs(j2j-j2i)%4) * obtd(i,j);
+    }
+
+  }
+  densfile.close();
+  if (not found_it)
+  {
+    cout << "WARNING!! Didn't find " << line_to_find.str() << "  in nutbar_densities.dat " << endl;
+  }
+  return obtd;
+}
+
+
+arma::mat TransitionDensity::ReadTBTD( int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int Lambda2, string fname)
+{
+  bool found_it = false;
+  int Ji = Jlist_i[J_index_i];
+  int Jf = Jlist_f[J_index_f];
+  ifstream densfile(fname);
+  string line;
+  ostringstream line_to_find;
+  line_to_find << "Jf nJf  Ji nJi  Lambda = "  << setw(3) << setprecision(1) << Jf*0.5 << " " << J_index_f+1
+          << "    " << setw(3) << setprecision(1) << Ji*0.5 << " " << J_index_i+1
+          << "    " << setw(3) << setprecision(1) << Lambda2*0.5;
+
+
+  while ( getline( densfile, line) )
+  {
+     if( line == line_to_find.str() )
+     {
+       found_it = true;
+       break;
+     }
+  }
+  while ( getline( densfile, line) )
+  {
+     if( line == "-------------- TBTD ---------------------" ) break;
+  }
+  arma::mat tbtd(ket_J.size(), ket_J.size(), arma::fill::zeros);
+  int ibra,iket;
+  double tbd;
+  while ( line.size() > 2 )
+  {
+    getline( densfile, line );
+    istringstream(line) >> ibra >> iket >> tbd;
+
+    int J2ab = ket_J[ibra];
+    int J2cd = ket_J[iket];
+    tbtd(ibra,iket) = tbd;
+
+    if  ((basename_i==basename_f) and (Ji == Jf) and (eigvec_i==eigvec_f))
+    {
+      tbtd(iket,ibra) = tbtd(ibra,iket) * (1-abs(J2ab-J2cd)%4); 
+    }
+  }
+  densfile.close();
+  if (not found_it)
+  {
+    cout << "WARNING!! Didn't find " << line_to_find.str() << "  in nutbar_densities.dat " << endl;
+  }
   return tbtd;
 }
 
@@ -1303,7 +1442,30 @@ void TransitionDensity::ReadSPfile()
 }
 
 
+void TransitionDensity::SetDensFile( string fname )
+{
+  densfile_name = fname;
+  ofstream densout(densfile_name);
+  densout << "# One and two body transition densities" << endl << "#" << endl;
+  densout << "# One-body basis:" << endl;
+  densout << "# i   n   l   2j  2tz (proton=+1)" << endl;
+  for (size_t i=0;i<jorbits.size();++i)
+  {
+    auto morb = m_orbits[jorbits[i]];
+    densout << setw(3) << i << " " << setw(3) << morb.n << " " << setw(3) << morb.l2/2 << " "
+            << setw(3) << morb.j2 << " " << setw(3) << morb.tz2 << endl;
+  }
 
+  densout << "# Two-body basis: " << endl;
+  densout << "# i   a   b   J" << endl;
+  for (size_t i=0;i<ket_a.size();++i)
+  {
+    densout << setw(3) << i << " " << setw(3) << ket_a[i] << " " << setw(3) << ket_b[i] << " " << setw(3) << ket_J[i]/2 << endl;
+  }
+
+  densout.close(); 
+
+}
 
 
 vector<float> operator*(const float lhs, const vector<float>& rhs)
