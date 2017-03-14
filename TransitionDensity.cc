@@ -628,16 +628,11 @@ double TransitionDensity::TBTD(int J_index_i, int eigvec_i, int J_index_f, int e
   for (auto& it_amp : amplitudes_i )
   {
      double amp_i = it_amp.second[J_index_i][eigvec_i];
-//     cout << "amp_i = " << amp_i << endl;
      if (abs(amp_i)<1e-7) continue;
      auto& key = it_amp.first;
      keys_i.push_back( key );
-//     cout << "pushing back key " ;
-//     for (auto x : key) cout << x << " ";
-//     cout << endl;
      amp_vec_i.push_back(amp_i);
   }
-//  cout << "size of keys_i = " << keys_i.size() << endl;
 
   double clebsch_fi = CG(J2i,Mi,Lambda2,mu,J2f,Mf);
   if (abs(clebsch_fi)<1e-9)
@@ -707,8 +702,6 @@ double TransitionDensity::TBTD(int J_index_i, int eigvec_i, int J_index_f, int e
           auto& key = keys_i[iamp];
           auto& amp_i = amp_vec_i[iamp];
 
-//          cout << " iamp = " << iamp << "  size of keys, amp_vec = " << keys_i.size() << "  " << amp_vec_i.size() << endl;
-//          cout << "heres where the trouble is. size of key is " << key.size() << endl;
           if (not(( (key[0] >> ic) & (key[0] >> id) )&0x1L) ) continue;
           auto new_key = key;
           new_key[0] &= (~ mask_cd); // remove particles from c and then from d  (d-c-)
@@ -728,7 +721,6 @@ double TransitionDensity::TBTD(int J_index_i, int eigvec_i, int J_index_f, int e
           for (int iphase = min(ia,ib)+1;iphase<max(ia,ib);++iphase)  if(( new_key[0] >>iphase )&0x1L) phase_ladder *=-1;
 
           tbd += amp_i * amp_f * clebsch_abcd * clebsch_ab * clebsch_cd * phasecd * phase_ladder;
-
         }
       }
     }
@@ -744,9 +736,6 @@ double TransitionDensity::TBTD(int J_index_i, int eigvec_i, int J_index_f, int e
 arma::mat TransitionDensity::CalcOBTD( int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int Lambda2)
 {
 
-//  cout << "Begin TransitionDensity::CalcOBTD( " << J_index_i << ", " << eigvec_i << ", " << J_index_f << ", " << eigvec_f << ", " << Lambda2 << " )" << endl;
-
-
   int Ji = Jlist_i[J_index_i];
   int Jf = Jlist_f[J_index_f];
   size_t njorb = jorbits.size();
@@ -755,7 +744,6 @@ arma::mat TransitionDensity::CalcOBTD( int J_index_i, int eigvec_i, int J_index_
   {
     int j2i = m_orbits[jorbits[i]].j2;
     int jmin = 0;
-//    if (J_index_i==J_index_f and eigvec_i==eigvec_f) jmin = i;
     if (basename_i==basename_f and Ji==Jf and eigvec_i==eigvec_f) jmin = i;
     for (size_t j=jmin; j<njorb; ++j)
     {
