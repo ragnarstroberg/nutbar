@@ -27,7 +27,7 @@ vector<char> TransitionDensity::an_code = {  '0','1','2','3','4','5','6','7','8'
                                              '_','-','c'};
 
 vector<string> TransitionDensity::periodic_table = {
-   "N","h_","he",
+  "xx","h_","he",
        "li","be","b_","c_","n_","o_","f_","ne",
        "na","mg","al","si","p_","s_","cl","ar",
        "k_","ca","sc","ti","v_","cr","mn","fe","co","ni","cu","zn","ga","ge","as","se","br","kr",
