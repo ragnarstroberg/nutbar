@@ -6,6 +6,7 @@
 #include "NuVec.hh"
 #include "JMState.hh"
 #include "JBasis.hh"
+#include "Profiler.hh"
 
 #include <vector>
 #include <armadillo>
@@ -38,8 +39,8 @@ class TransitionDensity
   vector<JBasis> jbasis_list_f;
   vector<NuVec> nuvec_list_i;
   vector<NuVec> nuvec_list_f;
-  unordered_map< vector<mvec_type>, vector<vector<float>>, KeyHash > amplitudes_i;
-  unordered_map< vector<mvec_type>, vector<vector<float>>, KeyHash > amplitudes_f;
+  unordered_map< key_type, vector<vector<float>> > amplitudes_i;
+  unordered_map< key_type, vector<vector<float>> > amplitudes_f;
   unordered_map<int,int> max_states_per_J_i;
   unordered_map<int,int> max_states_per_J_f;
   vector<int> ket_a;
@@ -47,15 +48,16 @@ class TransitionDensity
   vector<int> ket_J;
   static vector<char> an_code;
   static vector<string> periodic_table;
+  Profiler profiler;
+  string densfile_name;
 
 
   TransitionDensity();
   TransitionDensity(vector<int> jlist);
   TransitionDensity(vector<int> jlist_i, vector<int> jlist_f);
-//  void ReadInputFromFile(string filename);
-//  void ReadInputInteractive();
   void ReadFiles( );
   void CalculateMschemeAmplitudes();
+  void CalculateMschemeAmplitudes_fi(vector<NuVec>& , vector<JBasis>& , unordered_map<int,int>&, vector<vector<float>>&, unordered_map< key_type, vector<vector<float>> >& );
   void SetAZ(int a, int z){A_i=a;Z_i=z;A_f=a;Z_f=a;};
   void SetAZ_i(int a, int z){A_i=a;Z_i=z;};
   void SetAZ_f(int a, int z){A_f=a;Z_f=z;};
@@ -67,13 +69,16 @@ class TransitionDensity
   void GetScalarTransitionOperator( string filename, double& Op0b, arma::mat& Op1b, arma::mat& Op2b );
   arma::mat CalcOBTD( int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int Lambda2);
   arma::mat CalcTBTD( int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int Lambda2);
+  arma::mat ReadOBTD( int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int Lambda2, string fname);
+  arma::mat ReadTBTD( int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int Lambda2, string fname);
   void SetupKets();
-  void Jplus(vector<vector<mvec_type>>& mvecs_in, vector<double>& amp_in, int J2, int M2);
+  void Jplus(vector<key_type>& mvecs_in, vector<double>& amp_in, int J2, int M2);
   void WriteEGV( string fname);
   void WriteTRDENS_input(string fname);
-//  void SetMaxStatesPerJ( int J2, int imax){ max_states_per_J[J2] = imax;};
+  void ReadDensities( );
   void GetAZFromFileName( );
   void ReadSPfile();
+  void SetDensFile( string name ) ;
 
 
 };

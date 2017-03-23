@@ -17,6 +17,7 @@ void NuVec::ReadFile(string fname)
  int nwords=0;
 
  ifstream infile(fname, ios::binary );
+ 
   if (not infile.good() )
   {
     cout << "NuVec::ReadFile -- Trouble opening file " << fname << endl;
@@ -41,6 +42,8 @@ void NuVec::ReadFile(string fname)
 
 // cout << "no_state: " << no_state << endl;
 // cout << "no_level: " << no_level << endl;
+ size_t blocksize = 2 * DELIMITER_LENGTH + no_state*sizeof(alpha[0]) + no_state*sizeof(coefT[0][0]);
+
  for (int ilevel=0;ilevel<no_level;++ilevel)
  {
    infile.read((char*)&nwords, DELIMITER_LENGTH);

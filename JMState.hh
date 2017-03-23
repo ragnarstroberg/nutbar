@@ -4,6 +4,7 @@
 #ifndef JMState_h
 #include "NuBasis.hh"
 #include "NuProj.hh"
+#include "Profiler.hh"
 #include <vector>
 #include <string>
 #include <unordered_map>
@@ -11,24 +12,15 @@
 using namespace std;
 
 
-struct KeyHash
-{
-  size_t operator() (const vector<mvec_type>& key) const
-  {
-    size_t hash_out = 0;
-    for (size_t i=0;i<key.size();++i)  hash_out |= (key[i]<<i);
-    return hash_out;
-  }
-};
-
 
 class JMState
 {
  public:
   int J2, T2, M2;//, pindx;
   vector<int> pindx;
-  unordered_map<vector<mvec_type>,float,KeyHash> m_coefs;
+  unordered_map<key_type,float> m_coefs;
   vector<MschemeOrbit> m_orbits;
+  Profiler profiler;
 
   JMState();
   JMState(const JMState&)=default;
@@ -36,7 +28,7 @@ class JMState
   JMState(const NuBasis& nubasis, const NuProj& nuproj, int istate);
 
   void Print() const;
-  string PrintMstate(vector<mvec_type> vec_in) const;
+  string PrintMstate(key_type vec_in) const;
 
   void Normalize();
   void EliminateZeros();
@@ -64,7 +56,7 @@ class JMState
 JMState TensorProduct( JMState jm1, JMState jm2, int J2, int M2);
 JMState operator*(const double, const JMState&);
 
-vector<mvec_type> operator+( const vector<mvec_type>& lhs, const vector<mvec_type>& rhs);
+key_type operator+( const key_type& lhs, const key_type& rhs);
 
 double CG(int j2a, int m2a, int j2b, int m2b, int J2, int M2);
 

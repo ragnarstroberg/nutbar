@@ -13,8 +13,8 @@
 
 using namespace std;
 
-typedef int16_t part_type;
-typedef int64_t mvec_type;
+//typedef int16_t part_type;
+//typedef int64_t mvec_type;
 
 class NuVec
 {

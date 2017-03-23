@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <armadillo>
 #include <unordered_map>
+#include <omp.h>
 
 #include "TransitionDensity.hh"
 #include "JMState.hh"
@@ -40,131 +41,30 @@ vector<string> TransitionDensity::periodic_table = {
 
 
 TransitionDensity::TransitionDensity()
-: total_number_levels_i(0),total_number_levels_f(0)
+: total_number_levels_i(0),total_number_levels_f(0),densfile_name("none")
 {}
 
 TransitionDensity::TransitionDensity(vector<int> jlist)
 :total_number_levels_i(0),total_number_levels_f(0),
- Jlist_i(jlist), Jlist_f(jlist)
+ Jlist_i(jlist), Jlist_f(jlist),densfile_name("none")
 {}
 
 TransitionDensity::TransitionDensity(vector<int> jlist_i, vector<int> jlist_f)
 :total_number_levels_i(0),total_number_levels_f(0),
- Jlist_i(jlist_i), Jlist_f(jlist_f)
+ Jlist_i(jlist_i), Jlist_f(jlist_f),densfile_name("none")
 {}
 
 
-//void TransitionDensity::ReadInputInteractive()
-//{
-//
-//  cout << endl;
-//  cout << "Name of of NuShellFiles, (e.g. ne200): ";
-//  cout.flush();
-//  cin >> basename;
-//
-//  cout << "Name of sps file, (e.g. sdpn.sps): ";
-//  cout.flush();
-//  cin >> sps_file_name;
-//
-//  cout << "sps_file_name = " << sps_file_name << endl;
-//
-//  istringstream iss;
-//  string line;
-//
-//  cout << "J*2 values of eigenvectors (separated by space): ";
-//  cout.flush();
-//  getline(cin,line);
-//  getline(cin,line);
-//  iss.clear();
-//  iss.str(line);
-//  int j;
-//  while( iss >> j ) Jlist.push_back(j);
-//
-//
-//  cout << "Number of eigenstates for each J (separated by space, or single value if same for all J): ";
-//  cout.flush();
-//  getline(cin,line);
-//  iss.clear();
-//  iss.str(line);
-//  vector<int> spj;
-//  while( iss >> j ) spj.push_back(j);
-//  for (size_t i=0;i<Jlist.size();++i)
-//  {
-//    if (spj.size() < Jlist.size()) max_states_per_J[ Jlist[i] ] = spj[0];
-//    else                           max_states_per_J[ Jlist[i] ] = spj[i];
-//  }
-//
-//
-//  ofstream outfile("NuShelltoMBPT.input");
-//  outfile << basename << endl;
-//  outfile << sps_file_name << endl;
-//  for (auto j : Jlist) outfile << j << " ";
-//  outfile << endl;
-//  for (auto j : spj) outfile << j << " ";
-//  outfile << endl;
-//
-//
-//}
-
-
-
-//void TransitionDensity::ReadInputFromFile(string filename)
-//{
-//  ifstream infile(filename);
-//  istringstream iss;
-//
-//  string line;
-//
-//
-//  // basename for *.nba *.prj and *.xvc files
-//  getline(infile,line);
-//  iss.str(line);
-//  iss >> basename;
-//
-//  cout << "basename = " << basename << endl;
-//
-//  // basename for *.nba *.prj and *.xvc files
-//  getline(infile,line);
-//  iss.clear();
-//  iss.str(line);
-//  iss >> sps_file_name;
-//
-//  cout << "sps_file_name = " << sps_file_name << endl;
-//
-//
-//  // list of 2*J values
-//  getline(infile,line);
-//  iss.clear();
-//  iss.str(line);
-//  int j;
-//  while( iss >> j ) Jlist.push_back(j);
-//
-//  cout << "J values: ";
-//  for (auto j : Jlist) cout << j << " ";
-//  cout << endl;
-//
-//  // number of states to treat for each J
-//  getline(infile,line);
-//  iss.clear();
-//  iss.str(line);
-//  vector<int> spj;
-//  while( iss >> j ) spj.push_back(j);
-//  for (size_t i=0;i<Jlist.size();++i)
-//  {
-//    if (spj.size() < Jlist.size()) max_states_per_J[ Jlist[i] ] = spj[0];
-//    else                           max_states_per_J[ Jlist[i] ] = spj[i];
-//  }
-//
-//}
 
 
 
 
 
-//void TransitionDensity::ReadFiles( string spsfile, string abfile_base )
+
 void TransitionDensity::ReadFiles( )
 {
 
+  double t_start;
   ifstream testread; // for checking if files exist
   ostringstream ostr;
   vector<string> Afiles_i,Bfiles_i,Afiles_f,Bfiles_f;
@@ -176,8 +76,6 @@ void TransitionDensity::ReadFiles( )
   int nvalence_neutrons_i = A_i-Z_i - (Acore-Zcore);
   int nvalence_protons_f = Z_f - Zcore;
   int nvalence_neutrons_f = A_f-Z_f - (Acore-Zcore);
-//  for ( auto j : Jlist ) cout << j << " ";
-//  cout << endl;
 
 //  MJtot = (*min_element(begin(Jlist),end(Jlist)))%2;
   MJtot_i = (*min_element(begin(Jlist_i),end(Jlist_i)))%2;
@@ -198,7 +96,6 @@ void TransitionDensity::ReadFiles( )
     }
   }
   
-
 #ifdef VERBOSE
   cout << "TransitionDensity::ReadFiles -- finding all prj and nba files" << endl;
 #endif
@@ -269,6 +166,7 @@ void TransitionDensity::ReadFiles( )
   }
 
 
+  t_start = omp_get_wtime();
 #ifdef VERBOSE
   cout << "TransitionDensity::ReadFiles -- Starting loop over Jlist_i" << endl;
 #endif
@@ -313,9 +211,17 @@ void TransitionDensity::ReadFiles( )
     cout << "TransitionDensity::ReadFiles -- after testread.close, adding Jtot = " << Jtot << ", vecfile = " << vecfile << endl;
     #endif
     nuvec_list_i.emplace_back( NuVec(Jtot) );
+    #ifdef VERBOSE
+    cout << "Begin read " << vecfile << endl;
+    #endif
     nuvec_list_i.back().ReadFile(vecfile);
+    #ifdef VERBOSE
+    cout << " done." << endl;
+    #endif
   }
 
+  profiler.timer["Read_initial_vectors"] += omp_get_wtime() - t_start;
+  t_start = omp_get_wtime();
 
 #ifdef VERBOSE
   cout << "TransitionDensity::ReadFiles -- Starting loop over Jlist_f" << endl;
@@ -376,6 +282,7 @@ void TransitionDensity::ReadFiles( )
     }
   }
 
+  profiler.timer["Read_final_vectors"] += omp_get_wtime() - t_start;
 
 
   m_orbits = jbasis_list_i[0].nubasis_a.m_orbits;
@@ -410,84 +317,108 @@ void TransitionDensity::ReadFiles( )
 
 }
 
-
+/// Calculate the Mscheme wave functions for each eigenstate.
+/// If the final and initial states are the same, then don't calculate it twice.
 void TransitionDensity::CalculateMschemeAmplitudes()
 {
-  for (size_t ivec=0; ivec<nuvec_list_i.size(); ++ivec)
+  CalculateMschemeAmplitudes_fi( nuvec_list_i, jbasis_list_i, max_states_per_J_i, blank_vector_i, amplitudes_i);
+  bool same_f_i = true;
+  if (basename_i != basename_f or Jlist_i.size() != Jlist_f.size()) same_f_i = false;
+  if (same_f_i)
   {
-   cout << "ivec = " << ivec << endl;
-   const auto& nuvec = nuvec_list_i[ivec];
-   const auto& jbasis = jbasis_list_i[ivec];
-   cout << "no_state = " << nuvec.no_state << endl;
-   cout << "no_level = " << nuvec.no_level << endl;
+    for (size_t iJ=0; iJ<=Jlist_i.size(); ++iJ)
+    {
+      if (Jlist_i[iJ] != Jlist_f[iJ])
+      {
+        same_f_i = false;
+        break;
+      }
+      if (max_states_per_J_i[Jlist_i[iJ]] < max_states_per_J_f[Jlist_f[iJ]])
+      {
+        same_f_i = false;
+        break;
+      }
+    }
+  }
+  if (same_f_i) amplitudes_f = amplitudes_i;
+  else
+     CalculateMschemeAmplitudes_fi( nuvec_list_f, jbasis_list_f, max_states_per_J_f, blank_vector_f, amplitudes_f);
+}
+
+
+// vec   : labels a sub-block of good J,pi
+// state : basis state with good J
+// level : eigenstate of the Hamiltonian
+//
+void TransitionDensity::CalculateMschemeAmplitudes_fi(vector<NuVec>& nuvec_list, vector<JBasis>& jbasis_list, unordered_map<int,int>& max_states_per_J, vector<vector<float>>& blank_vector, unordered_map< key_type, vector<vector<float>> >& amplitudes)
+{
+  double t_start = omp_get_wtime();
+  int nthreads = omp_get_max_threads();
+  for (size_t ivec=0; ivec<nuvec_list.size(); ++ivec)
+  {
+//   cout << "ivec = " << ivec << endl;
+   const auto& nuvec = nuvec_list[ivec];
+   const auto& jbasis = jbasis_list[ivec];
+//   cout << "no_state = " << nuvec.no_state << endl;
+//   cout << "no_level = " << nuvec.no_level << "  max_states_per_J = " << max_states_per_J[ivec] << endl;
+   int imax = nuvec.no_level;
+   if ( max_states_per_J.find(nuvec.J2) != max_states_per_J.end() ) imax = min(imax,max_states_per_J[nuvec.J2]);
+//   cout << "imax = " << imax << endl;
+
+
+   if (nuvec.no_state > jbasis.basis_states.size() )
+   {
+     cout << "ERROR nuvec.no_state = " << nuvec.no_state << ",  basis_states.size() = " << jbasis.basis_states.size() << endl;
+     return;
+   }
   
+   double t_start_inner = omp_get_wtime();
+   vector<unordered_map< key_type, vector<float> >> local_amplitudes( nthreads );
+   // give each thread a local copy of the amplitudes
    // loop over J-coupled basis states
+   // I make this loop parallel because there are typically lots of basis states,
+   // while there often may only be one ilevel and one ivec.
+   #pragma omp parallel for schedule(dynamic,1)
    for (int istate=0;istate<nuvec.no_state;++istate)
    {
-     int imax = nuvec.no_level;
-     if ( max_states_per_J_i.find(nuvec.J2) != max_states_per_J_i.end() ) imax = min(imax,max_states_per_J_i[nuvec.J2]);
-     vector<float> level_coefs(imax,0.0);
-     for (int ilevel=0;ilevel<imax;++ilevel)
-     {
-       level_coefs[ilevel] = nuvec.coefT[ilevel][istate];
-     }
-  
-     if (istate>=jbasis.basis_states.size())
-     {
-       cout << "ERROR istate = " << istate << ",  basis_states.size() = " << jbasis.basis_states.size() << endl;
-       return;
-     }
-     const JMState& jmst = jbasis.basis_states[istate];
+     int thread_num = omp_get_thread_num();
+//     double t_getstate = omp_get_wtime();
+     const JMState jmst = jbasis.GetBasisState(istate);
+//     profiler.timer["GetBasisState"] += omp_get_wtime() - t_getstate;
      for (auto& it_mstate : jmst.m_coefs)
      {
        auto& key = it_mstate.first;
        const float& m_coef = it_mstate.second;
-       if( amplitudes_i.find(key) == amplitudes_i.end() ) amplitudes_i[key] = blank_vector_i;
-       amplitudes_i[key][ivec] += m_coef * level_coefs;
+
+       if( local_amplitudes[thread_num].find(key) == local_amplitudes[thread_num].end() ) local_amplitudes[thread_num][key] = vector<float>(imax,0.);
+       for (size_t ilevel=0;ilevel<imax;++ilevel) local_amplitudes[thread_num][key][ilevel] += m_coef * nuvec.coefT[ilevel][istate];
      }
    }
-  }
+   profiler.timer["amplitudes_calc"] += omp_get_wtime() - t_start_inner;
+   t_start_inner = omp_get_wtime();
 
-  // copy and paste code: easy to implement, hard to maintain...
-  for (size_t ivec=0; ivec<nuvec_list_f.size(); ++ivec)
-  {
-   cout << "ivec = " << ivec << endl;
-   const auto& nuvec = nuvec_list_f[ivec];
-   const auto& jbasis = jbasis_list_f[ivec];
-   cout << "no_state = " << nuvec.no_state << endl;
-   cout << "no_level = " << nuvec.no_level << endl;
-  
-   // loop over J-coupled basis states
-   for (int istate=0;istate<nuvec.no_state;++istate)
+   // Now accumulate amplitudes from all threads
    {
-     int imax = nuvec.no_level;
-     if ( max_states_per_J_f.find(nuvec.J2) != max_states_per_J_f.end() ) imax = min(imax,max_states_per_J_f[nuvec.J2]);
-     vector<float> level_coefs(imax,0.0);
-     for (int ilevel=0;ilevel<imax;++ilevel)
+     for (int ith=0;ith<nthreads;++ith)
      {
-       level_coefs[ilevel] = nuvec.coefT[ilevel][istate];
-     }
-  
-     if (istate>=jbasis.basis_states.size())
-     {
-       cout << "ERROR istate = " << istate << ",  basis_states.size() = " << jbasis.basis_states.size() << endl;
-       return;
-     }
-     const JMState& jmst = jbasis.basis_states[istate];
-     for (auto& it_mstate : jmst.m_coefs)
-     {
-       auto& key = it_mstate.first;
-       const float& m_coef = it_mstate.second;
-       if( amplitudes_f.find(key) == amplitudes_f.end() ) amplitudes_f[key] = blank_vector_f;
-       amplitudes_f[key][ivec] += m_coef * level_coefs;
+       for (auto& it_amp : local_amplitudes[ith] )
+       {
+         auto& key = it_amp.first;
+         if( amplitudes.find(key) == amplitudes.end() ) amplitudes[key] = blank_vector;
+         for (size_t ilevel=0;ilevel<imax;++ilevel) amplitudes[key][ivec][ilevel] +=  it_amp.second[ilevel];
+       }
      }
    }
+   profiler.timer["amplitudes_accumulate"] += omp_get_wtime() - t_start_inner;
   }
 
+  profiler.timer["CalculateMschemeAmplitudes"] += omp_get_wtime() - t_start;
 }
 
 
 
+
+/// Calculate a single one body transition density
 double TransitionDensity::OBTD(int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int m_index_a, int m_index_b, int Lambda2 )
 {
 
@@ -520,7 +451,8 @@ double TransitionDensity::OBTD(int J_index_i, int eigvec_i, int J_index_f, int e
   int ma_min = max(-j2_a,mu-j2_b);
   int ma_max = min(j2_a,mu+j2_b);
 
-  vector<vector<mvec_type>> keys_i;
+//  vector<vector<mvec_type>> keys_i;
+  vector<key_type> keys_i;
   vector<double> amp_vec_i;
 //  cout << "size of amplitudes_i = " << amplitudes_i.size() << endl;
   for (auto& it_amp : amplitudes_i )
@@ -556,8 +488,8 @@ double TransitionDensity::OBTD(int J_index_i, int eigvec_i, int J_index_f, int e
     int ia = m_index_a - ( j2_a -ma )/2;
     int ib = m_index_b - ( j2_b -mb )/2;
 
-    uint64_t mask_a = (0x1L<<ia);
-    uint64_t mask_b = (0x1L<<ib);
+//    uint64_t mask_a = (0x1L<<ia);
+//    uint64_t mask_b = (0x1L<<ib);
 
     // convention: tilded destruction operator b~(m) = (-1)**(jb + mb) b(-m)
     //                                         b(m)  = (-1)**(jb -mb) b~(-m)
@@ -570,16 +502,21 @@ double TransitionDensity::OBTD(int J_index_i, int eigvec_i, int J_index_f, int e
       auto& key = keys_i[iamp];
       auto& amp_i = amp_vec_i[iamp];
 
-      if ( not( key[0] & mask_b )) continue;
-      if ( ia != ib and   ( key[0] & mask_a) ) continue;
+//      if ( not( key[0] & mask_b )) continue;
+//      if ( ia != ib and   ( key[0] & mask_a) ) continue;
+      if ( not key[ib] ) continue;
       auto new_key = key;
-      new_key[0] &= ~mask_b;  // remove orbit b
-      new_key[0] |=  mask_a;  // add to orbit a
+      new_key.set(ib,0);
+      if ( new_key[ia] ) continue;
+      new_key.set(ia,1);
+//      new_key[0] &= ~mask_b;  // remove orbit b
+//      new_key[0] |=  mask_a;  // add to orbit a
       if (amplitudes_f.find(new_key) == amplitudes_f.end() ) continue;
 
 
       int phase_ladder = 1;
-      for (int iphase=min(ia,ib)+1;iphase<max(ia,ib);++iphase) if( (key[0] >>iphase )&0x1L) phase_ladder *=-1;
+//      for (int iphase=min(ia,ib)+1;iphase<max(ia,ib);++iphase) if( (key[0] >>iphase )&0x1L) phase_ladder *=-1;
+      for (int iphase=min(ia,ib)+1;iphase<max(ia,ib);++iphase) if( key[iphase]) phase_ladder *=-1;
       double amp_f = amplitudes_f[new_key][J_index_f][eigvec_f];
 
       obd += clebsch * amp_i * amp_f * phase_ladder * phase_b;
@@ -594,8 +531,7 @@ double TransitionDensity::OBTD(int J_index_i, int eigvec_i, int J_index_f, int e
 
 
 
-
-
+/// Calculate a single two body transition density
 double TransitionDensity::TBTD(int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int m_index_a, int m_index_b, int m_index_c, int m_index_d, int J2ab, int J2cd, int Lambda2 )
 {
 
@@ -616,14 +552,19 @@ double TransitionDensity::TBTD(int J_index_i, int eigvec_i, int J_index_f, int e
   m_index_c += (j2_c - m_orbits[m_index_c].mj2)/2;
   m_index_d += (j2_d - m_orbits[m_index_d].mj2)/2;
 
+//  bool printout = false;
+//  if (j2_a==7 and j2_b==7 and j2_c==7 and j2_d==7 and J2ab==4 and J2cd==4) printout=true;
+
 
   // check some triangle conditions
   if ((J2f+Lambda2 < J2i) or (abs(J2f-Lambda2)>J2i)) return 0;
   if ((j2_a+j2_b<J2ab) or (abs(j2_a-j2_b)>J2ab)) return 0;
   if ((j2_c+j2_d<J2cd) or (abs(j2_c-j2_d)>J2cd)) return 0;
   if ((J2ab+J2cd < Lambda2) or (abs(J2ab-J2cd)>Lambda2)) return 0;
+
   
-  vector<vector<mvec_type>> keys_i;
+//  vector<vector<mvec_type>> keys_i;
+  vector<key_type> keys_i;
   vector<double> amp_vec_i;
   for (auto& it_amp : amplitudes_i )
   {
@@ -694,19 +635,17 @@ double TransitionDensity::TBTD(int J_index_i, int eigvec_i, int J_index_f, int e
         int id = m_index_d - ( j2_d -md )/2;
         if (ic==id) continue;
 
-        uint64_t mask_ab = ((0x1L << ia ) + (0x1L << ib) );
-        uint64_t mask_cd = ((0x1L << ic ) + (0x1L << id) );
 
         for ( size_t iamp=0; iamp<amp_vec_i.size(); ++iamp )
         {
           auto& key = keys_i[iamp];
           auto& amp_i = amp_vec_i[iamp];
 
-          if (not(( (key[0] >> ic) & (key[0] >> id) )&0x1L) ) continue;
+          if (not (key[ic] && key[id]) ) continue;
           auto new_key = key;
-          new_key[0] &= (~ mask_cd); // remove particles from c and then from d  (d-c-)
-          if ( new_key[0] & mask_ab) continue;
-          new_key[0] |= mask_ab; // add particles to b and then to a  (a+b+)
+          new_key.set(ic,0).set(id,0); // remove particles from c and then from d  (d-c-)
+          if ( new_key[ia] || new_key[ib]) continue;
+          new_key.set(ib,1).set(ia,1); // add particles to b and then to a  (a+b+)
 
           auto iter_newkey = amplitudes_f.find(new_key);
           if (iter_newkey == amplitudes_f.end() 
@@ -717,8 +656,8 @@ double TransitionDensity::TBTD(int J_index_i, int eigvec_i, int J_index_f, int e
 
           // pick up a phase from commuting the ladder operators
           int phase_ladder = (ia>ib xor id<ic) ? -1 : 1;
-          for (int iphase = min(ic,id)+1;iphase<max(ic,id);++iphase)  if(( key[0] >>iphase )&0x1L) phase_ladder *=-1;
-          for (int iphase = min(ia,ib)+1;iphase<max(ia,ib);++iphase)  if(( new_key[0] >>iphase )&0x1L) phase_ladder *=-1;
+          for (int iphase = min(ic,id)+1;iphase<max(ic,id);++iphase)  if( key[iphase]) phase_ladder *=-1;
+          for (int iphase = min(ia,ib)+1;iphase<max(ia,ib);++iphase)  if( new_key[iphase]) phase_ladder *=-1;
 
           tbd += amp_i * amp_f * clebsch_abcd * clebsch_ab * clebsch_cd * phasecd * phase_ladder;
         }
@@ -736,10 +675,22 @@ double TransitionDensity::TBTD(int J_index_i, int eigvec_i, int J_index_f, int e
 arma::mat TransitionDensity::CalcOBTD( int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int Lambda2)
 {
 
+  double t_start = omp_get_wtime();
+
   int Ji = Jlist_i[J_index_i];
   int Jf = Jlist_f[J_index_f];
   size_t njorb = jorbits.size();
   arma::mat obtd(njorb,njorb,arma::fill::zeros);
+  ofstream densout( densfile_name, ios::app );
+  if ( densfile_name != "none")
+  {
+     densout << endl;
+     densout << "Jf nJf  Ji nJi  Lambda = " << setw(3) << setprecision(1) << Jf*0.5 << " " << J_index_f+1
+             << "    " << setw(3) << setprecision(1) << Ji*0.5 << " " << J_index_i+1
+             << "    " << setw(3) << setprecision(1) << Lambda2*0.5  << endl;
+     densout << "-------------- OBTD ---------------------" << endl;
+  }
+
   for (size_t i=0; i<njorb; ++i)
   {
     int j2i = m_orbits[jorbits[i]].j2;
@@ -748,6 +699,12 @@ arma::mat TransitionDensity::CalcOBTD( int J_index_i, int eigvec_i, int J_index_
     for (size_t j=jmin; j<njorb; ++j)
     {
       obtd(i,j) = OBTD( J_index_i, eigvec_i, J_index_f, eigvec_f, jorbits[i], jorbits[j], Lambda2);
+      if (Lambda2 == 0)  obtd(i,j) /= sqrt( Ji+1 );
+
+      if (densfile_name != "none" and abs(obtd(i,j))>1e-7)
+      {
+         densout << setw(3) << i << " " << setw(3) << j << " "  << setw(12) << fixed << setprecision(8) << obtd(i,j)  << endl;
+      }
       if (basename_i==basename_f and Ji==Jf and eigvec_i==eigvec_f)
       {
         int j2j = m_orbits[jorbits[j]].j2;
@@ -756,6 +713,8 @@ arma::mat TransitionDensity::CalcOBTD( int J_index_i, int eigvec_i, int J_index_
     }
   }
 
+  densout.close();
+  profiler.timer["CalcOBTD"] += omp_get_wtime() - t_start;
   return obtd;
 
 }
@@ -764,9 +723,11 @@ arma::mat TransitionDensity::CalcOBTD( int J_index_i, int eigvec_i, int J_index_
 
 
 
+
 arma::mat TransitionDensity::CalcTBTD( int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int Lambda2)
 {
 
+  double t_start = omp_get_wtime();
   // generate all the two body states that are needed
    SetupKets();
 
@@ -774,6 +735,7 @@ arma::mat TransitionDensity::CalcTBTD( int J_index_i, int eigvec_i, int J_index_
   int Ji = Jlist_i[J_index_i];
   int Jf = Jlist_f[J_index_f];
   if (abs(Ji-Jf)>Lambda2 or Ji+Jf<Lambda2) return tbtd;
+
 
   #pragma omp parallel for schedule(dynamic,1)
   for (size_t ibra=0;ibra<ket_J.size();++ibra)
@@ -797,6 +759,128 @@ arma::mat TransitionDensity::CalcTBTD( int J_index_i, int eigvec_i, int J_index_
         tbtd(iket,ibra) = tbtd(ibra,iket) * (1-abs(J2ab-J2cd)%4); 
       }
     }
+  }
+
+  if (Lambda2==0) tbtd /= sqrt( Ji+1.);
+  if ( densfile_name != "none" )
+  {
+    ofstream densout(densfile_name, ios::app);
+    densout << endl;
+    densout << "-------------- TBTD ---------------------" << endl;
+    for (size_t i=0;i<tbtd.n_rows;++i)
+    {
+      for (size_t j=0;j<tbtd.n_cols;++j)
+      {
+         if (abs(tbtd(i,j))>1e-7)
+         densout << setw(3) << i << " " << setw(3) << j << " "  << setw(12) << fixed << setprecision(8) << tbtd(i,j) << endl;
+      }
+    }
+    densout.close();
+  }
+
+  profiler.timer["CalcTBTD"] += omp_get_wtime() - t_start;
+  return tbtd;
+}
+
+
+
+arma::mat TransitionDensity::ReadOBTD( int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int Lambda2, string fname)
+{
+  bool found_it = false;
+  int Ji = Jlist_i[J_index_i];
+  int Jf = Jlist_f[J_index_f];
+  size_t njorb = jorbits.size();
+  ifstream densfile(fname);
+  string line;
+  ostringstream line_to_find;
+  line_to_find <<  "Jf nJf  Ji nJi  Lambda = "   << setw(3) << setprecision(1) << Jf*0.5 << " " << J_index_f+1
+          << "    " << setw(3) << setprecision(1) << Ji*0.5 << " " << J_index_i+1
+          << "    " << setw(3) << setprecision(1) << Lambda2*0.5;
+
+
+  while ( getline( densfile, line) )
+  {
+     if( line == line_to_find.str() )
+     {
+       found_it = true;
+       break;
+     }
+  }
+  while ( getline( densfile, line) )
+  {
+     if( line == "-------------- OBTD ---------------------" ) break;
+  }
+  arma::mat obtd(njorb,njorb,arma::fill::zeros);
+  int i,j;
+  double obd;
+  while ( line.size() > 2 )
+  {
+    getline( densfile, line );
+    istringstream(line) >> i >> j >> obd;
+    obtd(i,j) = obd;
+    if (basename_i==basename_f and Ji==Jf and eigvec_i==eigvec_f)
+    {
+      int j2i = m_orbits[jorbits[i]].j2;
+      int j2j = m_orbits[jorbits[j]].j2;
+      obtd(j,i) = (1-abs(j2j-j2i)%4) * obtd(i,j);
+    }
+
+  }
+  densfile.close();
+  if (not found_it)
+  {
+    cout << "WARNING!! Didn't find " << line_to_find.str() << "  in nutbar_densities.dat " << endl;
+  }
+  return obtd;
+}
+
+
+arma::mat TransitionDensity::ReadTBTD( int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int Lambda2, string fname)
+{
+  bool found_it = false;
+  int Ji = Jlist_i[J_index_i];
+  int Jf = Jlist_f[J_index_f];
+  ifstream densfile(fname);
+  string line;
+  ostringstream line_to_find;
+  line_to_find << "Jf nJf  Ji nJi  Lambda = "  << setw(3) << setprecision(1) << Jf*0.5 << " " << J_index_f+1
+          << "    " << setw(3) << setprecision(1) << Ji*0.5 << " " << J_index_i+1
+          << "    " << setw(3) << setprecision(1) << Lambda2*0.5;
+
+
+  while ( getline( densfile, line) )
+  {
+     if( line == line_to_find.str() )
+     {
+       found_it = true;
+       break;
+     }
+  }
+  while ( getline( densfile, line) )
+  {
+     if( line == "-------------- TBTD ---------------------" ) break;
+  }
+  arma::mat tbtd(ket_J.size(), ket_J.size(), arma::fill::zeros);
+  int ibra,iket;
+  double tbd;
+  while ( line.size() > 2 )
+  {
+    getline( densfile, line );
+    istringstream(line) >> ibra >> iket >> tbd;
+
+    int J2ab = ket_J[ibra];
+    int J2cd = ket_J[iket];
+    tbtd(ibra,iket) = tbd;
+
+    if  ((basename_i==basename_f) and (Ji == Jf) and (eigvec_i==eigvec_f))
+    {
+      tbtd(iket,ibra) = tbtd(ibra,iket) * (1-abs(J2ab-J2cd)%4); 
+    }
+  }
+  densfile.close();
+  if (not found_it)
+  {
+    cout << "WARNING!! Didn't find " << line_to_find.str() << "  in nutbar_densities.dat " << endl;
   }
   return tbtd;
 }
@@ -1059,7 +1143,7 @@ void TransitionDensity::SetupKets()
 
 
 
-void TransitionDensity::Jplus(vector<vector<mvec_type>>& mvecs_in, vector<double>& amp_in, int J2, int M2)
+void TransitionDensity::Jplus(vector<key_type>& mvecs_in, vector<double>& amp_in, int J2, int M2)
 {
   if (M2+2 > J2)
   {
@@ -1067,28 +1151,21 @@ void TransitionDensity::Jplus(vector<vector<mvec_type>>& mvecs_in, vector<double
      amp_in.clear();
      return;
   }
-  unordered_map<vector<mvec_type>,double,KeyHash> amps_out;
+  unordered_map<key_type,double> amps_out;
 
   for (size_t i=0;i<mvecs_in.size();++i)
   {
     auto& mvec_in = mvecs_in[i];
     for (size_t i_m=0; i_m<m_orbits.size();++i_m)
     {
-      int iword = i_m/(sizeof(mvec_type)*8);
-      int ibit = i_m%(sizeof(mvec_type)*8);
-      if ( (not((mvec_in[iword]>>ibit)&0x1L)) or ((mvec_in[iword]>>(ibit+1))&0x1)  ) continue; // Pauli principle
+      if ( (not mvec_in[i_m]) or (mvec_in[i_m+1])  ) continue; // Pauli principle
       
       int j2  = m_orbits[i_m].j2;
       int mj2 = m_orbits[i_m].mj2;
       if (mj2==j2) continue;
-      vector<mvec_type> temp_mvec_out = mvec_in;
-      temp_mvec_out[iword] &= ~(0x1L << (ibit));
-      temp_mvec_out[iword] |=  (0x1L << (ibit+1));
+      key_type temp_mvec_out = mvec_in;
+      temp_mvec_out.set(i_m,0).set(i_m+1,1);
       amps_out[temp_mvec_out] += sqrt( j2*(j2+2)-mj2*(mj2+2) )*0.5 * amp_in[i];
-//      if (J2==2)
-//      {
-//        cout << "       " << j2 << " " << mj2 << " " << sqrt( j2*(j2+2)-mj2*(mj2+2))*0.5 << " " << amp_in[i] << endl;
-//      }
     }
   }
   
@@ -1199,7 +1276,6 @@ void TransitionDensity::WriteEGV(string fname)
   output << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
   
   
-//  cout << "n_core_orbits = " << n_core_orbits << "  mscheme_orbits.size = " << mscheme_orbits.size() << endl;
   
   // Write m-scheme basis occupations and eigenvector coefficients
   size_t bits_per_word = 8*sizeof(mvec_type);
@@ -1210,7 +1286,7 @@ void TransitionDensity::WriteEGV(string fname)
     output << " " ;
     for (size_t i=0;i<mscheme_orbits.size()-n_core_orbits;++i)
     {
-      if ( (mvec[i/bits_per_word] >> (i%bits_per_word))&0x1L)
+      if ( mvec[i])
           output << n_core_orbits + i+1 << " ";
     }
     output << "   ";
@@ -1331,7 +1407,30 @@ void TransitionDensity::ReadSPfile()
 }
 
 
+void TransitionDensity::SetDensFile( string fname )
+{
+  densfile_name = fname;
+  ofstream densout(densfile_name);
+  densout << "# One and two body transition densities" << endl << "#" << endl;
+  densout << "# One-body basis:" << endl;
+  densout << "# i   n   l   2j  2tz (proton=+1)" << endl;
+  for (size_t i=0;i<jorbits.size();++i)
+  {
+    auto morb = m_orbits[jorbits[i]];
+    densout << setw(3) << i << " " << setw(3) << morb.n << " " << setw(3) << morb.l2/2 << " "
+            << setw(3) << morb.j2 << " " << setw(3) << morb.tz2 << endl;
+  }
 
+  densout << "# Two-body basis: " << endl;
+  densout << "# i   a   b   J" << endl;
+  for (size_t i=0;i<ket_a.size();++i)
+  {
+    densout << setw(3) << i << " " << setw(3) << ket_a[i] << " " << setw(3) << ket_b[i] << " " << setw(3) << ket_J[i]/2 << endl;
+  }
+
+  densout.close(); 
+
+}
 
 
 vector<float> operator*(const float lhs, const vector<float>& rhs)
