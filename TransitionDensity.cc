@@ -41,17 +41,17 @@ vector<string> TransitionDensity::periodic_table = {
 
 
 TransitionDensity::TransitionDensity()
-: total_number_levels_i(0),total_number_levels_f(0),densfile_name("none")
+: total_number_levels_i(0),total_number_levels_f(0),densfile_name("none"),Acore(0),Zcore(0)
 {}
 
 TransitionDensity::TransitionDensity(vector<int> jlist)
 :total_number_levels_i(0),total_number_levels_f(0),
- Jlist_i(jlist), Jlist_f(jlist),densfile_name("none")
+ Jlist_i(jlist), Jlist_f(jlist),densfile_name("none"),Acore(0),Zcore(0)
 {}
 
 TransitionDensity::TransitionDensity(vector<int> jlist_i, vector<int> jlist_f)
 :total_number_levels_i(0),total_number_levels_f(0),
- Jlist_i(jlist_i), Jlist_f(jlist_f),densfile_name("none")
+ Jlist_i(jlist_i), Jlist_f(jlist_f),densfile_name("none"),Acore(0),Zcore(0)
 {}
 
 
@@ -76,6 +76,7 @@ void TransitionDensity::ReadFiles( )
   int nvalence_neutrons_i = A_i-Z_i - (Acore-Zcore);
   int nvalence_protons_f = Z_f - Zcore;
   int nvalence_neutrons_f = A_f-Z_f - (Acore-Zcore);
+
 
 //  MJtot = (*min_element(begin(Jlist),end(Jlist)))%2;
   MJtot_i = (*min_element(begin(Jlist_i),end(Jlist_i)))%2;
@@ -1387,7 +1388,6 @@ void TransitionDensity::GetAZFromFileName(  )
   // now guess at what the core should be, assuming a full major oscillator shell valence space
   for (int N=0;(N+1)*(N+2)*(N+3)/3<=Z_i;++N) Zcore = (N+1)*(N+2)*(N+3)/3; 
   for (int N=0;(N+1)*(N+2)*(N+3)/3<=(A_i-Z_i);++N) Acore = Zcore + (N+1)*(N+2)*(N+3)/3; 
-
 
   if ( A_i < Acore ) A_i +=100;
   if ( A_f < Acore ) A_f +=100;
