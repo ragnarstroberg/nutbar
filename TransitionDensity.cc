@@ -368,7 +368,8 @@ void TransitionDensity::CalculateMschemeAmplitudes_fi(vector<NuVec>& nuvec_list,
 
    if (nuvec.no_state > jbasis.basis_states.size() )
    {
-     cout << "ERROR nuvec.no_state = " << nuvec.no_state << ",  basis_states.size() = " << jbasis.basis_states.size() << endl;
+     cout << "ERROR nuvec.no_state = " << nuvec.no_state << ",  basis_states.size() = " << jbasis.basis_states.size()
+          << "   ivec = " << ivec << "  J = " << jbasis.J2/2 << endl;
      return;
    }
   
