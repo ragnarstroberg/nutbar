@@ -932,14 +932,33 @@ arma::mat TransitionDensity::GetOneBodyTransitionOperator( string filename, int&
   arma::mat Op1b(jorbits.size(),jorbits.size(),arma::fill::zeros);
 
   getline(opfile, line); // skip final header
-  int a,b;
+  int ain,bin,a,b;
   double Op_ab;
-  while ( opfile >> a >> b >> Op_ab)
+  while ( opfile >> ain >> bin >> Op_ab)
   {
-    a = orbits_in[a-1]; // fortran indexing...
-    b = orbits_in[b-1];
+    a = orbits_in[ain-1]; // fortran indexing...
+    b = orbits_in[bin-1];
     int j2a = m_orbits[jorbits[a]].j2;
     int j2b = m_orbits[jorbits[b]].j2;
+    int tz2a = m_orbits[jorbits[a]].tz2;
+    int tz2b = m_orbits[jorbits[b]].tz2;
+    int la = m_orbits[jorbits[a]].l2/2;
+    int lb = m_orbits[jorbits[b]].l2/2;
+    if ( (abs(j2a-j2b) > 2*Rank_J) or (j2a+j2b < 2*Rank_J) and abs(Op_ab)>1e-6 )
+    {
+      std::cout << "WARNING: mat. el. violates triangle contition for rank-" << Rank_J << " operator. -- " << ain << " " << bin << " " << Op_ab << std::endl;
+      continue;
+    }
+    if ( (abs(tz2a-tz2b) != 2*Rank_T) and abs(Op_ab)>1e-6   )
+    {
+      std::cout << "WARNING: mat. el. has wrong isospin projection. dTz = " << Rank_T << " operator. -- " << ain << " " << bin << " " << Op_ab << std::endl;
+      continue;
+    }
+    if ( (la+lb)%2 != (1-parity)/2 and abs(Op_ab)>1e-6  )
+    {
+      std::cout << "WARNING: mat. el. has wrong parity (" << parity << ")-- " << ain << " " << bin << " " << Op_ab << std::endl;
+      continue;
+    }
     Op1b(a,b) = Op_ab;
     Op1b(b,a) = (1 - abs(j2a-j2b)%4) * Op_ab; // phase factor (-1)^(ja-jb)
   }
@@ -996,14 +1015,40 @@ arma::mat TransitionDensity::GetTwoBodyTransitionOperator( string filename , int
 
   if ( line.find("Jab")==string::npos )
     getline(opfile, line); // skip final header
-  int a,b,c,d,Jab,Jcd;
+  int ain,bin,cin,din,a,b,c,d,Jab,Jcd;
   double Op_abcd;
-  while ( opfile >> a >> b >> c >> d >> Jab >> Jcd >> Op_abcd )
+  while ( opfile >> ain >> bin >> cin >> din >> Jab >> Jcd >> Op_abcd )
   {
-    a = orbits_in[a-1]; // fortran indexing...
-    b = orbits_in[b-1];
-    c = orbits_in[c-1]; // fortran indexing...
-    d = orbits_in[d-1];
+    a = orbits_in[ain-1]; // fortran indexing...
+    b = orbits_in[bin-1];
+    c = orbits_in[cin-1]; // fortran indexing...
+    d = orbits_in[din-1];
+    int tz2a = m_orbits[jorbits[a]].tz2;
+    int tz2b = m_orbits[jorbits[b]].tz2;
+    int tz2c = m_orbits[jorbits[c]].tz2;
+    int tz2d = m_orbits[jorbits[d]].tz2;
+    int la = m_orbits[jorbits[a]].l2/2;
+    int lb = m_orbits[jorbits[b]].l2/2;
+    int lc = m_orbits[jorbits[c]].l2/2;
+    int ld = m_orbits[jorbits[d]].l2/2;
+    if ( (abs(Jab-Jcd) > Rank_J) or (Jab+Jcd < 2*Rank_J) and abs(Op_abcd)>1e-6 )
+    {
+      std::cout << "WARNING: mat. el. violates triangle contition for rank-" << Rank_J << " operator. -- "
+               << ain << " " << bin << " " << cin << " " << din << " " << Jab << " " << Jcd << " " << Op_abcd << std::endl;
+      continue;
+    }
+    if ( (abs(tz2a+tz2b-tz2c-tz2d) != 2*Rank_T)  and abs(Op_abcd)>1e-6)
+    {
+      std::cout << "WARNING: mat. el. has wrong isospin projection. dTz = " << Rank_T << " operator. -- " 
+               << ain << " " << bin << " " << cin << " " << din << " " << Jab << " " << Jcd << " " << Op_abcd << std::endl;
+      continue;
+    }
+    if ( (la+lb+lc+ld)%2 != (1-parity)/2 and abs(Op_abcd)>1e-6)
+    {
+      std::cout << "WARNING: mat. el. has wrong parity -- " 
+               << ain << " " << bin << " " << cin << " " << din << " " << Jab << " " << Jcd << " " << Op_abcd << std::endl;
+      continue;
+    }
     Jab *=2;
     Jcd *=2;
     if (a>b)
