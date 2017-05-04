@@ -369,7 +369,7 @@ void TransitionDensity::CalculateMschemeAmplitudes_fi(vector<NuVec>& nuvec_list,
 
    if (nuvec.no_state > jbasis.basis_states.size() )
    {
-     cout << "ERROR nuvec.no_state = " << nuvec.no_state << ",  basis_states.size() = " << jbasis.basis_states.size() << endl;
+     cout << "ERROR -- TransitionDensity::CalculateMschemeAmplitudes_fi -- nuvec.no_state = " << nuvec.no_state << ",  basis_states.size() = " << jbasis.basis_states.size() << endl;
      return;
    }
   
@@ -1031,7 +1031,7 @@ arma::mat TransitionDensity::GetTwoBodyTransitionOperator( string filename , int
     int lb = m_orbits[jorbits[b]].l2/2;
     int lc = m_orbits[jorbits[c]].l2/2;
     int ld = m_orbits[jorbits[d]].l2/2;
-    if ( (abs(Jab-Jcd) > Rank_J) or (Jab+Jcd < 2*Rank_J) and abs(Op_abcd)>1e-6 )
+    if ( (abs(Jab-Jcd) > Rank_J) or (Jab+Jcd < Rank_J) and abs(Op_abcd)>1e-6 )
     {
       std::cout << "WARNING: mat. el. violates triangle contition for rank-" << Rank_J << " operator. -- "
                << ain << " " << bin << " " << cin << " " << din << " " << Jab << " " << Jcd << " " << Op_abcd << std::endl;
