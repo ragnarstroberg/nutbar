@@ -83,13 +83,13 @@ void JBasis::SetupBasis( string sps_file,  vector<string> A_files, vector<string
           if (JA+JB<J2 or abs(JA-JB)>J2) continue;
 
          #ifdef VERBOSE
-          cout << "  JBasis::SetupBasis -- about to add TensorProduct( " << JA << ", " << JB << ", " << J2 << " " << M2 << " )  " << i_a << ", " << i_b << endl;
+//          cout << "  JBasis::SetupBasis -- about to add TensorProduct( " << JA << ", " << JB << ", " << J2 << " " << M2 << " )  " << i_a << ", " << i_b << endl;
          #endif
 //          basis_states.emplace_back( TensorProduct( jmstate_a, jmstate_b, J2,M2) );
 //          basis_states.emplace_back( TensorProduct( jmstates_a[i_a+offset_a], jmstates_b[i_b+offset_b], J2,M2) );
           basis_states.emplace_back( array<int,4>({ i_a+offset_a, i_b+offset_b, J2, M2 }) );
          #ifdef VERBOSE
-          cout << "  JBasis::SetupBasis -- done. size of basis state = " << basis_states.back().m_coefs.size() << endl;
+//          cout << "  JBasis::SetupBasis -- done. size of basis state = " << basis_states.back().m_coefs.size() << endl;
          #endif
 
         }

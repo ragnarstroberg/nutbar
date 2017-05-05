@@ -16,7 +16,7 @@
 
 using namespace std;
 
-
+// a and b are presumably skipped here because a and b are used to label proton/neutron
 vector<char> TransitionDensity::an_code = {  '0','1','2','3','4','5','6','7','8','9',
                                              '_','-','c','d','e','f','g','h','i','j',  
                                              'k','l','m','n','o','p','q','r','s','t',  
@@ -109,7 +109,8 @@ void TransitionDensity::ReadFiles( )
     {
       ostr.str("");
       ostr.str().clear();
-      ostr << basename_i << "a" << iJ << "0" << an_code[36 + icode/2];
+//      ostr << basename_i << "a" << iJ << "0" << an_code[36 + icode/2];
+      ostr << basename_i << "a" << an_code[iJ] << "0" << an_code[36 + icode/2];
       testread.open(ostr.str()+".nba");
       if ( testread.fail() ) break;
       if ( find(Afiles_i.begin(),Afiles_i.end(), ostr.str() ) == Afiles_i.end())
@@ -122,7 +123,8 @@ void TransitionDensity::ReadFiles( )
     {
       ostr.str("");
       ostr.str().clear();
-      ostr << basename_i << "b" << iJ << "0" << an_code[36 + icode/2];
+//      ostr << basename_i << "b" << iJ << "0" << an_code[36 + icode/2];
+      ostr << basename_i << "b" << an_code[iJ] << "0" << an_code[36 + icode/2];
       testread.open(ostr.str()+".nba");
       if ( testread.fail() ) break;
       if ( find(Bfiles_i.begin(),Bfiles_i.end(), ostr.str() ) == Bfiles_i.end())
@@ -143,7 +145,8 @@ void TransitionDensity::ReadFiles( )
     {
       ostr.str("");
       ostr.str().clear();
-      ostr << basename_f << "a" << iJ << "0" << an_code[36 + icode/2];
+//      ostr << basename_f << "a" << iJ << "0" << an_code[36 + icode/2];
+      ostr << basename_f << "a" << an_code[iJ] << "0" << an_code[36 + icode/2];
       testread.open(ostr.str()+".nba");
       if ( testread.fail() ) break;
       if ( find(Afiles_f.begin(),Afiles_f.end(), ostr.str() ) == Afiles_f.end())
@@ -156,7 +159,8 @@ void TransitionDensity::ReadFiles( )
     {
       ostr.str("");
       ostr.str().clear();
-      ostr << basename_f << "b" << iJ << "0" << an_code[36 + icode/2];
+//      ostr << basename_f << "b" << iJ << "0" << an_code[36 + icode/2];
+      ostr << basename_f << "b" << an_code[iJ] << "0" << an_code[36 + icode/2];
       testread.open(ostr.str()+".nba");
       if ( testread.fail() ) break;
       if ( find(Bfiles_f.begin(),Bfiles_f.end(), ostr.str() ) == Bfiles_f.end())
@@ -369,7 +373,7 @@ void TransitionDensity::CalculateMschemeAmplitudes_fi(vector<NuVec>& nuvec_list,
 
    if (nuvec.no_state > jbasis.basis_states.size() )
    {
-     cout << "ERROR nuvec.no_state = " << nuvec.no_state << ",  basis_states.size() = " << jbasis.basis_states.size()
+     cout << "ERROR -- TransitionDensity::CalculateMschemeAmplitudes_fi -- nuvec.no_state = " << nuvec.no_state << ",  basis_states.size() = " << jbasis.basis_states.size()
           << "   ivec = " << ivec << "  J = " << jbasis.J2/2 << endl;
      return;
    }
@@ -933,14 +937,33 @@ arma::mat TransitionDensity::GetOneBodyTransitionOperator( string filename, int&
   arma::mat Op1b(jorbits.size(),jorbits.size(),arma::fill::zeros);
 
   getline(opfile, line); // skip final header
-  int a,b;
+  int ain,bin,a,b;
   double Op_ab;
-  while ( opfile >> a >> b >> Op_ab)
+  while ( opfile >> ain >> bin >> Op_ab)
   {
-    a = orbits_in[a-1]; // fortran indexing...
-    b = orbits_in[b-1];
+    a = orbits_in[ain-1]; // fortran indexing...
+    b = orbits_in[bin-1];
     int j2a = m_orbits[jorbits[a]].j2;
     int j2b = m_orbits[jorbits[b]].j2;
+    int tz2a = m_orbits[jorbits[a]].tz2;
+    int tz2b = m_orbits[jorbits[b]].tz2;
+    int la = m_orbits[jorbits[a]].l2/2;
+    int lb = m_orbits[jorbits[b]].l2/2;
+    if ( (abs(j2a-j2b) > 2*Rank_J) or (j2a+j2b < 2*Rank_J) and abs(Op_ab)>1e-6 )
+    {
+      std::cout << "WARNING: mat. el. violates triangle contition for rank-" << Rank_J << " operator. -- " << ain << " " << bin << " " << Op_ab << std::endl;
+      continue;
+    }
+    if ( (abs(tz2a-tz2b) != 2*Rank_T) and abs(Op_ab)>1e-6   )
+    {
+      std::cout << "WARNING: mat. el. has wrong isospin projection. dTz = " << Rank_T << " operator. -- " << ain << " " << bin << " " << Op_ab << std::endl;
+      continue;
+    }
+    if ( (la+lb)%2 != (1-parity)/2 and abs(Op_ab)>1e-6  )
+    {
+      std::cout << "WARNING: mat. el. has wrong parity (" << parity << ")-- " << ain << " " << bin << " " << Op_ab << std::endl;
+      continue;
+    }
     Op1b(a,b) = Op_ab;
     Op1b(b,a) = (1 - abs(j2a-j2b)%4) * Op_ab; // phase factor (-1)^(ja-jb)
   }
@@ -997,14 +1020,40 @@ arma::mat TransitionDensity::GetTwoBodyTransitionOperator( string filename , int
 
   if ( line.find("Jab")==string::npos )
     getline(opfile, line); // skip final header
-  int a,b,c,d,Jab,Jcd;
+  int ain,bin,cin,din,a,b,c,d,Jab,Jcd;
   double Op_abcd;
-  while ( opfile >> a >> b >> c >> d >> Jab >> Jcd >> Op_abcd )
+  while ( opfile >> ain >> bin >> cin >> din >> Jab >> Jcd >> Op_abcd )
   {
-    a = orbits_in[a-1]; // fortran indexing...
-    b = orbits_in[b-1];
-    c = orbits_in[c-1]; // fortran indexing...
-    d = orbits_in[d-1];
+    a = orbits_in[ain-1]; // fortran indexing...
+    b = orbits_in[bin-1];
+    c = orbits_in[cin-1]; // fortran indexing...
+    d = orbits_in[din-1];
+    int tz2a = m_orbits[jorbits[a]].tz2;
+    int tz2b = m_orbits[jorbits[b]].tz2;
+    int tz2c = m_orbits[jorbits[c]].tz2;
+    int tz2d = m_orbits[jorbits[d]].tz2;
+    int la = m_orbits[jorbits[a]].l2/2;
+    int lb = m_orbits[jorbits[b]].l2/2;
+    int lc = m_orbits[jorbits[c]].l2/2;
+    int ld = m_orbits[jorbits[d]].l2/2;
+    if ( (abs(Jab-Jcd) > Rank_J) or (Jab+Jcd < Rank_J) and abs(Op_abcd)>1e-6 )
+    {
+      std::cout << "WARNING: mat. el. violates triangle contition for rank-" << Rank_J << " operator. -- "
+               << ain << " " << bin << " " << cin << " " << din << " " << Jab << " " << Jcd << " " << Op_abcd << std::endl;
+      continue;
+    }
+    if ( (abs(tz2a+tz2b-tz2c-tz2d) != 2*Rank_T)  and abs(Op_abcd)>1e-6)
+    {
+      std::cout << "WARNING: mat. el. has wrong isospin projection. dTz = " << Rank_T << " operator. -- " 
+               << ain << " " << bin << " " << cin << " " << din << " " << Jab << " " << Jcd << " " << Op_abcd << std::endl;
+      continue;
+    }
+    if ( (la+lb+lc+ld)%2 != (1-parity)/2 and abs(Op_abcd)>1e-6)
+    {
+      std::cout << "WARNING: mat. el. has wrong parity -- " 
+               << ain << " " << bin << " " << cin << " " << din << " " << Jab << " " << Jcd << " " << Op_abcd << std::endl;
+      continue;
+    }
     Jab *=2;
     Jcd *=2;
     if (a>b)
