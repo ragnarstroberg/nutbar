@@ -690,8 +690,10 @@ arma::mat TransitionDensity::CalcOBTD( int J_index_i, int eigvec_i, int J_index_
   if ( densfile_name != "none")
   {
      densout << endl;
-     densout << "Jf nJf  Ji nJi  Lambda = " << setw(3) << setprecision(1) << Jf*0.5 << " " << J_index_f+1
-             << "    " << setw(3) << setprecision(1) << Ji*0.5 << " " << J_index_i+1
+//     densout << "Jf nJf  Ji nJi  Lambda = " << setw(3) << setprecision(1) << Jf*0.5 << " " << J_index_f+1
+     densout << "Jf nJf  Ji nJi  Lambda = " << setw(3) << setprecision(1) << Jf*0.5 << " " << eigvec_f+1
+             << "    " << setw(3) << setprecision(1) << Ji*0.5 << " " << eigvec_i+1
+//             << "    " << setw(3) << setprecision(1) << Ji*0.5 << " " << J_index_i+1
              << "    " << setw(3) << setprecision(1) << Lambda2*0.5  << endl;
      densout << "-------------- OBTD ---------------------" << endl;
   }
