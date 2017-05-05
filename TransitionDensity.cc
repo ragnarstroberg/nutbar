@@ -16,7 +16,7 @@
 
 using namespace std;
 
-
+// a and b are presumably skipped here because a and b are used to label proton/neutron
 vector<char> TransitionDensity::an_code = {  '0','1','2','3','4','5','6','7','8','9',
                                              '_','-','c','d','e','f','g','h','i','j',  
                                              'k','l','m','n','o','p','q','r','s','t',  
@@ -109,7 +109,8 @@ void TransitionDensity::ReadFiles( )
     {
       ostr.str("");
       ostr.str().clear();
-      ostr << basename_i << "a" << iJ << "0" << an_code[36 + icode/2];
+//      ostr << basename_i << "a" << iJ << "0" << an_code[36 + icode/2];
+      ostr << basename_i << "a" << an_code[iJ] << "0" << an_code[36 + icode/2];
       testread.open(ostr.str()+".nba");
       if ( testread.fail() ) break;
       if ( find(Afiles_i.begin(),Afiles_i.end(), ostr.str() ) == Afiles_i.end())
@@ -122,7 +123,8 @@ void TransitionDensity::ReadFiles( )
     {
       ostr.str("");
       ostr.str().clear();
-      ostr << basename_i << "b" << iJ << "0" << an_code[36 + icode/2];
+//      ostr << basename_i << "b" << iJ << "0" << an_code[36 + icode/2];
+      ostr << basename_i << "b" << an_code[iJ] << "0" << an_code[36 + icode/2];
       testread.open(ostr.str()+".nba");
       if ( testread.fail() ) break;
       if ( find(Bfiles_i.begin(),Bfiles_i.end(), ostr.str() ) == Bfiles_i.end())
@@ -143,7 +145,8 @@ void TransitionDensity::ReadFiles( )
     {
       ostr.str("");
       ostr.str().clear();
-      ostr << basename_f << "a" << iJ << "0" << an_code[36 + icode/2];
+//      ostr << basename_f << "a" << iJ << "0" << an_code[36 + icode/2];
+      ostr << basename_f << "a" << an_code[iJ] << "0" << an_code[36 + icode/2];
       testread.open(ostr.str()+".nba");
       if ( testread.fail() ) break;
       if ( find(Afiles_f.begin(),Afiles_f.end(), ostr.str() ) == Afiles_f.end())
@@ -156,7 +159,8 @@ void TransitionDensity::ReadFiles( )
     {
       ostr.str("");
       ostr.str().clear();
-      ostr << basename_f << "b" << iJ << "0" << an_code[36 + icode/2];
+//      ostr << basename_f << "b" << iJ << "0" << an_code[36 + icode/2];
+      ostr << basename_f << "b" << an_code[iJ] << "0" << an_code[36 + icode/2];
       testread.open(ostr.str()+".nba");
       if ( testread.fail() ) break;
       if ( find(Bfiles_f.begin(),Bfiles_f.end(), ostr.str() ) == Bfiles_f.end())
