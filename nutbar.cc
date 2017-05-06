@@ -203,7 +203,8 @@ int main(int argc, char** argv)
        else
        {
          obtd = trans.CalcOBTD(Ji,ivec,Jf,fvec,Lambda*2);
-         tbtd = trans.CalcTBTD(Ji,ivec,Jf,fvec,Lambda*2);
+         if (settings.tensor_op_files.size() > 1)
+           tbtd = trans.CalcTBTD(Ji,ivec,Jf,fvec,Lambda*2);
        }
  
        if (settings.tensor_op_files.size()>0)
