@@ -355,6 +355,9 @@ void TransitionDensity::CalculateMschemeAmplitudes()
 // state : basis state with good J
 // level : eigenstate of the Hamiltonian
 //
+// if we call a level |J> and a state |j> and an m-scheme determinant |m>,
+// this function evaluates   |J> = sum_{j,m} |m><m|j><j|J>.
+//
 void TransitionDensity::CalculateMschemeAmplitudes_fi(vector<NuVec>& nuvec_list, vector<JBasis>& jbasis_list, unordered_map<int,int>& max_states_per_J, vector<vector<float>>& blank_vector, unordered_map< key_type, vector<vector<float>> >& amplitudes)
 {
   double t_start = omp_get_wtime();
@@ -384,6 +387,8 @@ void TransitionDensity::CalculateMschemeAmplitudes_fi(vector<NuVec>& nuvec_list,
    // loop over J-coupled basis states
    // I make this loop parallel because there are typically lots of basis states,
    // while there often may only be one ilevel and one ivec.
+   // There is probably a more clever way to do this, since with a large calculation
+   // using lots of threads will chew up lots of memory.
    #pragma omp parallel for schedule(dynamic,1)
    for (int istate=0;istate<nuvec.no_state;++istate)
    {
