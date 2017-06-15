@@ -25,7 +25,13 @@ JMState::JMState(const NuBasis& nubasis, const NuProj& nuproj, int istate)
   {
     m_coefs[nubasis.vec[pindx[0]-1][iibf]] += nuproj.coef_st[istate][iibf];
   }
+#ifdef VERBOSE
+  cout << "JMState::JMstate  about to call EliminateZeros. istate = " << istate << endl;
+#endif
   EliminateZeros();
+#ifdef VERBOSE
+  cout << "JMState::JMstate done" << endl;
+#endif
 }
 
 

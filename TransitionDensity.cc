@@ -290,7 +290,9 @@ void TransitionDensity::ReadFiles( )
   profiler.timer["Read_final_vectors"] += omp_get_wtime() - t_start;
 
 
-  m_orbits = jbasis_list_i[0].nubasis_a.m_orbits;
+//  m_orbits = jbasis_list_i[0].nubasis_a.m_orbits;
+//  m_orbits = jbasis_list_i[0].nubasis.m_orbits;
+  m_orbits = jbasis_list_i[0].m_orbits;
   jorbits.clear();
   for (size_t i=0;i<m_orbits.size();++i )
   {
@@ -320,12 +322,14 @@ void TransitionDensity::ReadFiles( )
     total_number_levels_f += blank_vector_f.back().size();
   }
 
+  cout << "done reading files" << endl;
 }
 
 /// Calculate the Mscheme wave functions for each eigenstate.
 /// If the final and initial states are the same, then don't calculate it twice.
 void TransitionDensity::CalculateMschemeAmplitudes()
 {
+  cout << "start CalculateMschemeAmplitudes" << endl;
   CalculateMschemeAmplitudes_fi( nuvec_list_i, jbasis_list_i, max_states_per_J_i, blank_vector_i, amplitudes_i);
   bool same_f_i = true;
   if (basename_i != basename_f or Jlist_i.size() != Jlist_f.size()) same_f_i = false;
@@ -348,6 +352,7 @@ void TransitionDensity::CalculateMschemeAmplitudes()
   if (same_f_i) amplitudes_f = amplitudes_i;
   else
      CalculateMschemeAmplitudes_fi( nuvec_list_f, jbasis_list_f, max_states_per_J_f, blank_vector_f, amplitudes_f);
+  cout << "done" << endl;
 }
 
 
@@ -362,14 +367,22 @@ void TransitionDensity::CalculateMschemeAmplitudes_fi(vector<NuVec>& nuvec_list,
 {
   double t_start = omp_get_wtime();
   int nthreads = omp_get_max_threads();
+  cout << "max_states_per_J:  ";
+  for (auto m : max_states_per_J) cout << m.first << ", " << m.second << ";  ";
+  cout << endl;
+  cout << "Jvals :  ";
+  for (auto& jb : jbasis_list) cout << jb.J2/2 << " ";
+  cout << endl;
   for (size_t ivec=0; ivec<nuvec_list.size(); ++ivec)
   {
-//   cout << "ivec = " << ivec << endl;
    const auto& nuvec = nuvec_list[ivec];
    const auto& jbasis = jbasis_list[ivec];
-//   cout << "no_state = " << nuvec.no_state << endl;
-//   cout << "no_level = " << nuvec.no_level << "  max_states_per_J = " << max_states_per_J[ivec] << endl;
    int imax = nuvec.no_level;
+//  #ifdef VERBOSE
+   cout << "ivec = " << ivec << endl;
+   cout << "no_state = " << nuvec.no_state << endl;
+   cout << "no_level = " << nuvec.no_level << "  max_states_per_J = " << max_states_per_J[nuvec.J2] << endl;
+//  #endif
    if ( max_states_per_J.find(nuvec.J2) != max_states_per_J.end() ) imax = min(imax,max_states_per_J[nuvec.J2]);
 //   cout << "imax = " << imax << endl;
 
@@ -1271,7 +1284,9 @@ void TransitionDensity::WriteEGV(string fname)
 
   // loop over the valence orbits
   int n_core_orbits = mscheme_orbits.size();
-  for (auto& morbit : jbasis_list_i[0].nubasis_a.m_orbits)
+//  for (auto& morbit : jbasis_list_i[0].nubasis_a.m_orbits)
+//  for (auto& morbit : jbasis_list_i[0].nubasis.m_orbits)
+  for (auto& morbit : jbasis_list_i[0].m_orbits)
   {
      mscheme_orbits.push_back ( morbit );
   }
