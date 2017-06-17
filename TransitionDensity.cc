@@ -378,13 +378,13 @@ void TransitionDensity::CalculateMschemeAmplitudes_fi(vector<NuVec>& nuvec_list,
    const auto& nuvec = nuvec_list[ivec];
    const auto& jbasis = jbasis_list[ivec];
    int imax = nuvec.no_level;
-//  #ifdef VERBOSE
+  #ifdef VERBOSE
    cout << "ivec = " << ivec << endl;
    cout << "no_state = " << nuvec.no_state << endl;
    cout << "no_level = " << nuvec.no_level << "  max_states_per_J = " << max_states_per_J[nuvec.J2] << endl;
-//  #endif
+  #endif
    if ( max_states_per_J.find(nuvec.J2) != max_states_per_J.end() ) imax = min(imax,max_states_per_J[nuvec.J2]);
-//   cout << "imax = " << imax << endl;
+   cout << "imax = " << imax << endl;
 
 
    if (nuvec.no_state > jbasis.basis_states.size() )
@@ -815,6 +815,13 @@ arma::mat TransitionDensity::ReadOBTD( int J_index_i, int eigvec_i, int J_index_
   int Jf = Jlist_f[J_index_f];
   size_t njorb = jorbits.size();
   ifstream densfile(fname);
+  if (not densfile.good())
+  {
+   cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
+   cout << "!! TransitionDensity::ReadOBTD -- trouble reading " << fname  << endl;
+   cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
+   exit(EXIT_FAILURE);
+  }
   string line;
   ostringstream line_to_find;
   line_to_find <<  "Jf nJf  Ji nJi  Lambda = "   << setw(3) << setprecision(1) << Jf*0.5 << " " << eigvec_f+1
@@ -865,6 +872,13 @@ arma::mat TransitionDensity::ReadTBTD( int J_index_i, int eigvec_i, int J_index_
   int Ji = Jlist_i[J_index_i];
   int Jf = Jlist_f[J_index_f];
   ifstream densfile(fname);
+  if (not densfile.good())
+  {
+   cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
+   cout << "!! TransitionDensity::ReadTBTD -- trouble reading " << fname  << endl;
+   cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
+   exit(EXIT_FAILURE);
+  }
   string line;
   ostringstream line_to_find;
   line_to_find << "Jf nJf  Ji nJi  Lambda = "  << setw(3) << setprecision(1) << Jf*0.5 << " " << eigvec_f+1
@@ -1469,7 +1483,13 @@ void TransitionDensity::ReadSPfile()
 {
   string sp_file_name = sps_file_name.substr(0,sps_file_name.find_last_of(".")) + ".sp";
   ifstream infile(sp_file_name);
-  if (not infile.good()) return;
+  if (not infile.good())
+  {
+    cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
+    cout << "TransitionDensity::ReadSPfile -- error reading " << sp_file_name << endl;
+    cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
+    exit(EXIT_FAILURE);
+  }
   infile.ignore(256,'\n');
   infile.ignore(256,'\n');
   infile >> Acore >> Zcore;

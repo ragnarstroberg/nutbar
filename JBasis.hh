@@ -23,7 +23,7 @@ class JBasis
   JBasis( string sps_file,  vector<string> proton_files, vector<string> neutron_files, int j2, int m2 );
 
   void SetupBasis( string sps_file,  vector<string> A_files, vector<string> B_files);
-  void SetUpJMState_ab(  string sps_file,  vector<string> filenames, vector<JMState>& jmstates,  vector<int>& offsets);
+  void SetUpJMState_ab(  NuBasis& nubasis, NuProj& nuproj,  vector<string> filenames, vector<JMState>& jmstates,  vector<int>& offsets);
   JMState GetBasisState(size_t index) const;
 
 };

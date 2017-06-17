@@ -10,6 +10,7 @@ void NuProj::ReadFile(string fname)
 {
 
  int nwords;
+ Clear();
 
  ifstream infile(fname, ios::binary );
 

@@ -14,11 +14,14 @@ NuBasis::NuBasis()
 
 void NuBasis::ReadFile(string fname)
 {
+  Clear();
   ifstream infile(fname, ios::binary );
   if (not infile.good() )
   {
-    cout << "trouble with file name" << endl;
-    return ;
+   cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
+   cout << "!! ERROR: Trouble in NuBasis::ReadFile --" << fname << "  !!" << endl;
+   cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
+    exit(EXIT_FAILURE) ;
   }
 
  int nwords;
@@ -109,6 +112,13 @@ void NuBasis::ReadSPS(string fname)
 {
 
   ifstream infile( fname );
+  if ( not infile.good() )
+  {
+   cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
+   cout << "!! ERROR: Trouble reading SPS file " << fname << "  !!" << endl;
+   cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
+   exit(EXIT_FAILURE);
+  }
   int nshells;
   infile >> nshells;
   char pn[nshells];
