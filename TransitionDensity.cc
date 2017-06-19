@@ -290,7 +290,9 @@ void TransitionDensity::ReadFiles( )
   profiler.timer["Read_final_vectors"] += omp_get_wtime() - t_start;
 
 
-  m_orbits = jbasis_list_i[0].nubasis_a.m_orbits;
+//  m_orbits = jbasis_list_i[0].nubasis_a.m_orbits;
+//  m_orbits = jbasis_list_i[0].nubasis.m_orbits;
+  m_orbits = jbasis_list_i[0].m_orbits;
   jorbits.clear();
   for (size_t i=0;i<m_orbits.size();++i )
   {
@@ -320,12 +322,14 @@ void TransitionDensity::ReadFiles( )
     total_number_levels_f += blank_vector_f.back().size();
   }
 
+  cout << "done reading files" << endl;
 }
 
 /// Calculate the Mscheme wave functions for each eigenstate.
 /// If the final and initial states are the same, then don't calculate it twice.
 void TransitionDensity::CalculateMschemeAmplitudes()
 {
+  cout << "start CalculateMschemeAmplitudes" << endl;
   CalculateMschemeAmplitudes_fi( nuvec_list_i, jbasis_list_i, max_states_per_J_i, blank_vector_i, amplitudes_i);
   bool same_f_i = true;
   if (basename_i != basename_f or Jlist_i.size() != Jlist_f.size()) same_f_i = false;
@@ -352,6 +356,7 @@ void TransitionDensity::CalculateMschemeAmplitudes()
   if (same_f_i) amplitudes_f = amplitudes_i;
   else
      CalculateMschemeAmplitudes_fi( nuvec_list_f, jbasis_list_f, max_states_per_J_f, blank_vector_f, amplitudes_f);
+  cout << "done" << endl;
 }
 
 
@@ -366,22 +371,31 @@ void TransitionDensity::CalculateMschemeAmplitudes_fi(vector<NuVec>& nuvec_list,
 {
   double t_start = omp_get_wtime();
   int nthreads = omp_get_max_threads();
+  cout << "max_states_per_J:  ";
+  for (auto m : max_states_per_J) cout << m.first << ", " << m.second << ";  ";
+  cout << endl;
+  cout << "Jvals :  ";
+  for (auto& jb : jbasis_list) cout << jb.J2/2 << " ";
+  cout << endl;
   for (size_t ivec=0; ivec<nuvec_list.size(); ++ivec)
   {
-//   cout << "ivec = " << ivec << endl;
    const auto& nuvec = nuvec_list[ivec];
    const auto& jbasis = jbasis_list[ivec];
    jbasis.GetNaiveMschemeDimension();
-//   cout << "no_state = " << nuvec.no_state << endl;
-//   cout << "no_level = " << nuvec.no_level << "  max_states_per_J = " << max_states_per_J[ivec] << endl;
    int imax = nuvec.no_level;
+  #ifdef VERBOSE
+   cout << "ivec = " << ivec << endl;
+   cout << "no_state = " << nuvec.no_state << endl;
+   cout << "no_level = " << nuvec.no_level << "  max_states_per_J = " << max_states_per_J[nuvec.J2] << endl;
+  #endif
    if ( max_states_per_J.find(nuvec.J2) != max_states_per_J.end() ) imax = min(imax,max_states_per_J[nuvec.J2]);
-//   cout << "imax = " << imax << endl;
+   cout << "imax = " << imax << endl;
 
 
    if (nuvec.no_state > jbasis.basis_states.size() )
    {
-     cout << "ERROR -- TransitionDensity::CalculateMschemeAmplitudes_fi -- nuvec.no_state = " << nuvec.no_state << ",  basis_states.size() = " << jbasis.basis_states.size() << endl;
+     cout << "ERROR -- TransitionDensity::CalculateMschemeAmplitudes_fi -- nuvec.no_state = " << nuvec.no_state << ",  basis_states.size() = " << jbasis.basis_states.size()
+          << "   ivec = " << ivec << "  J = " << jbasis.J2/2 << endl;
      return;
    }
   
@@ -706,10 +720,8 @@ arma::mat TransitionDensity::CalcOBTD( int J_index_i, int eigvec_i, int J_index_
   if ( densfile_name != "none")
   {
      densout << endl;
-//     densout << "Jf nJf  Ji nJi  Lambda = " << setw(3) << setprecision(1) << Jf*0.5 << " " << J_index_f+1
      densout << "Jf nJf  Ji nJi  Lambda = " << setw(3) << setprecision(1) << Jf*0.5 << " " << eigvec_f+1
              << "    " << setw(3) << setprecision(1) << Ji*0.5 << " " << eigvec_i+1
-//             << "    " << setw(3) << setprecision(1) << Ji*0.5 << " " << J_index_i+1
              << "    " << setw(3) << setprecision(1) << Lambda2*0.5  << endl;
      densout << "-------------- OBTD ---------------------" << endl;
   }
@@ -814,10 +826,17 @@ arma::mat TransitionDensity::ReadOBTD( int J_index_i, int eigvec_i, int J_index_
   int Jf = Jlist_f[J_index_f];
   size_t njorb = jorbits.size();
   ifstream densfile(fname);
+  if (not densfile.good())
+  {
+   cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
+   cout << "!! TransitionDensity::ReadOBTD -- trouble reading " << fname  << endl;
+   cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
+   exit(EXIT_FAILURE);
+  }
   string line;
   ostringstream line_to_find;
-  line_to_find <<  "Jf nJf  Ji nJi  Lambda = "   << setw(3) << setprecision(1) << Jf*0.5 << " " << J_index_f+1
-          << "    " << setw(3) << setprecision(1) << Ji*0.5 << " " << J_index_i+1
+  line_to_find <<  "Jf nJf  Ji nJi  Lambda = "   << setw(3) << setprecision(1) << Jf*0.5 << " " << eigvec_f+1
+          << "    " << setw(3) << setprecision(1) << Ji*0.5 << " " << eigvec_i+1
           << "    " << setw(3) << setprecision(1) << Lambda2*0.5;
 
 
@@ -864,10 +883,17 @@ arma::mat TransitionDensity::ReadTBTD( int J_index_i, int eigvec_i, int J_index_
   int Ji = Jlist_i[J_index_i];
   int Jf = Jlist_f[J_index_f];
   ifstream densfile(fname);
+  if (not densfile.good())
+  {
+   cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
+   cout << "!! TransitionDensity::ReadTBTD -- trouble reading " << fname  << endl;
+   cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
+   exit(EXIT_FAILURE);
+  }
   string line;
   ostringstream line_to_find;
-  line_to_find << "Jf nJf  Ji nJi  Lambda = "  << setw(3) << setprecision(1) << Jf*0.5 << " " << J_index_f+1
-          << "    " << setw(3) << setprecision(1) << Ji*0.5 << " " << J_index_i+1
+  line_to_find << "Jf nJf  Ji nJi  Lambda = "  << setw(3) << setprecision(1) << Jf*0.5 << " " << eigvec_f+1
+          << "    " << setw(3) << setprecision(1) << Ji*0.5 << " " << eigvec_i+1
           << "    " << setw(3) << setprecision(1) << Lambda2*0.5;
 
 
@@ -1283,7 +1309,9 @@ void TransitionDensity::WriteEGV(string fname)
 
   // loop over the valence orbits
   int n_core_orbits = mscheme_orbits.size();
-  for (auto& morbit : jbasis_list_i[0].nubasis_a.m_orbits)
+//  for (auto& morbit : jbasis_list_i[0].nubasis_a.m_orbits)
+//  for (auto& morbit : jbasis_list_i[0].nubasis.m_orbits)
+  for (auto& morbit : jbasis_list_i[0].m_orbits)
   {
      mscheme_orbits.push_back ( morbit );
   }
@@ -1466,7 +1494,13 @@ void TransitionDensity::ReadSPfile()
 {
   string sp_file_name = sps_file_name.substr(0,sps_file_name.find_last_of(".")) + ".sp";
   ifstream infile(sp_file_name);
-  if (not infile.good()) return;
+  if (not infile.good())
+  {
+    cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
+    cout << "TransitionDensity::ReadSPfile -- error reading " << sp_file_name << endl;
+    cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
+    exit(EXIT_FAILURE);
+  }
   infile.ignore(256,'\n');
   infile.ignore(256,'\n');
   infile >> Acore >> Zcore;
