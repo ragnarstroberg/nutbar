@@ -25,11 +25,8 @@ void NuBasis::ReadFile(string fname)
  sum_nJT=0;
 
  infile.read((char*)&nwords, sizeof(nwords));
-// cout << "nwords = " << nwords << endl;
  infile.read((char*)&no_spart, sizeof(no_spart));
  infile.read((char*)&nwords, sizeof(nwords));
-// cout << "nwords = " << nwords << endl;
-// cout <<"no_spart: " << no_spart << endl;
  pindx.resize(no_spart);
  nJT.resize(no_spart);
  j.resize(no_spart);
@@ -53,50 +50,24 @@ void NuBasis::ReadFile(string fname)
     infile.read((char*)&max_cTz2[isp], sizeof(max_cTz2[isp]));
     infile.read((char*)&nwords, sizeof(nwords));
 
-//    cout << "pindx: " << pindx[isp] << endl;
-//    cout << "nJT: " << nJT[isp] << endl;
-//    cout << "j: " << j[isp] << endl;
-//    cout << "t: " << t[isp] << endl;
-//    cout << "ibf: " << ibf[isp] << endl;
-//    cout << "max_cM2: " << max_cM2[isp] << endl;
-//    cout << "max_cTz2: " << max_cTz2[isp] << endl;
     sum_nJT += nJT[isp];
    
     infile.read((char*)&nwords, sizeof(nwords));
-//    cout << "nwords = " << nwords << endl;
     partition[isp].resize(nwords/sizeof(part_type));
     infile.read((char*)&partition[isp][0], nwords);
     infile.read((char*)&nwords, sizeof(nwords));
-   // infile.seekg(DELIMITER_LENGTH,ios::cur);
-   
-//    cout << "parition: ";
-//    for (auto c : partition[isp]) cout << int(c) << " ";
-//    cout << endl;
     
     if (ibf[isp]>0)
     {    
     infile.read((char*)&nwords, sizeof(nwords));
-//    cout << "for vec, nwords = " << nwords  << "  compare with " << gwords*sizeof(mvec_type)*ibf[isp] << endl;
       vec[isp].resize(ibf[isp]);
-//      cout << "vec:" << endl;
       for (int i=0;i<ibf[isp];i++) 
       {
-//        vec[isp][i].resize(gwords);
-//        infile.read((char*)&vec[isp][i][0], gwords*sizeof(mvec_type));
         infile.read((char*)&vec[isp][i], gwords*sizeof(mvec_type));
-//        cout << "  i: " << i << endl;
-//        for (int g=0;g<gwords;++g)
-//        {
-//           cout << "  " << setw(10) << vec[isp][i][g] << "   " << bitset<8*gwords*sizeof(mvec_type)>(vec[isp][i][g]) << endl;;
-//        }
-//        cout << endl;
       }
       infile.read((char*)&nwords, sizeof(nwords));
-//      cout << "done with vec. nwords = " << nwords << endl;
     }
-//    cout << endl;
  }
-// cout << "sum nJT = " << sum_nJT << endl;
 
 }
 

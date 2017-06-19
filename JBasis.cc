@@ -1,5 +1,6 @@
 
 #include <string>
+#include <set>
 
 #include "JBasis.hh"
 
@@ -108,5 +109,55 @@ JMState JBasis::GetBasisState(size_t index) const
   int M2 = basis_states[index][3];
   return TensorProduct( jmstates_a[i_a], jmstates_b[i_b], J2, M2 );
 //  return basis_states[index];
+}
+
+
+
+int JBasis::GetNaiveMschemeDimension() const
+{
+//  set<key_type> mstates_a, mstates_b;
+  map<int,set<uint64_t>> mstates_a, mstates_b;
+  for (auto& jst : jmstates_a)
+  {
+    if (mstates_a.count(jst.M2)<1) mstates_a[jst.M2] = set<uint64_t>();
+    for (auto& itm: jst.m_coefs)
+    {
+      uint64_t k = itm.first.to_ulong();
+//      if (mstates_a.count(itm.first)<1) mstates_a.insert(itm.first);
+      if (mstates_a[jst.M2].count(k)<1 and jst.M2==3)
+      {
+        mstates_a[jst.M2].insert(k);
+        cout << "Inserted " << itm.first <<  " J,M = (" << jst.J2 <<  " " << jst.M2 << ")   k = " << k << endl;
+      }
+    }
+  }
+  for (auto& jst : jmstates_b)
+  {
+    if (mstates_b.count(jst.M2)<1) mstates_b[jst.M2] = set<uint64_t>();
+    for (auto& itm: jst.m_coefs)
+    {
+      uint64_t k = itm.first.to_ulong();
+      if (mstates_b[jst.M2].count(k)<1) mstates_b[jst.M2].insert(k);
+//      if (mstates_b.count(itm.first)<1) mstates_b.insert(itm.first);
+    }
+  }
+  int nm = 0;
+  cout << "J2,M2 = " << J2 << " " << M2 << endl;
+  for (auto& it_a : mstates_a)
+  {
+    int ma = it_a.first;
+    int mb = abs(J2 - ma);
+    cout << "ma = " << ma << endl;
+    if (mstates_b.count(mb))
+    {
+      cout << "ma = " << ma << "  mb = " << mb << "  sizes = " << mstates_a[ma].size() << " " << mstates_b[mb].size() << endl;
+      nm += (min(ma,mb)+1)*it_a.second.size() * mstates_b[mb].size();
+      for ( auto vecb : mstates_b[mb]) cout << bitset<64>(vecb) << endl;
+    }
+  }
+//  cout << "dim a: " << mstates_a.size() << "   dim b: " << mstates_b.size() << "  product = " << mstates_a.size() * mstates_b.size() << endl;
+  cout << "dim = " << nm << endl;
+  return mstates_a.size() * mstates_b.size();
+
 }
 

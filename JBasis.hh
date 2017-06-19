@@ -27,6 +27,8 @@ class JBasis
   void SetupBasis( string sps_file,  vector<string> A_files, vector<string> B_files);
   JMState GetBasisState(size_t index) const;
 
+  int GetNaiveMschemeDimension() const;
+
 };
 
 
