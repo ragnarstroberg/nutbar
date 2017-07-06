@@ -18,6 +18,7 @@ class JMState
  public:
   int J2, T2, M2;//, pindx;
   vector<int> pindx;
+  vector<vector<part_type>> partition;
   unordered_map<key_type,float> m_coefs;
   vector<MschemeOrbit> m_orbits;
   Profiler profiler;
