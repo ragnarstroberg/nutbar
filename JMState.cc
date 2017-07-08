@@ -7,6 +7,7 @@
 #include <omp.h>
 
 #include "JMState.hh"
+#include "AngMom.hh"
 
 #define gwords 1
 
@@ -19,7 +20,7 @@ JMState::JMState()
 
 JMState::JMState(const NuBasis& nubasis, const NuProj& nuproj, int istate)
  : J2(nuproj.j[istate]), T2(nuproj.t[istate]), M2(nuproj.j[istate]),pindx(1,nuproj.pindx[istate]),
-  partition(nubasis.partition),m_orbits(nubasis.m_orbits)
+  partition(nubasis.partition[istate]),m_orbits(nubasis.m_orbits)
 {
   for (int iibf=0;iibf<nubasis.ibf[pindx[0]-1];++iibf)
   {
@@ -336,11 +337,11 @@ JMState operator*(const double lhs, const JMState& rhs)
 
 
 
-// Clebsch-Gordan coefficient
-double CG(int j2a, int m2a, int j2b, int m2b, int J2, int M2)
-{
-  return (1-abs(j2a-j2b+M2)%4) * sqrt(J2+1) * gsl_sf_coupling_3j(j2a,j2b,J2,m2a,m2b,-M2);
-}
+//// Clebsch-Gordan coefficient
+//double CG(int j2a, int m2a, int j2b, int m2b, int J2, int M2)
+//{
+//  return (1-abs(j2a-j2b+M2)%4) * sqrt(J2+1) * gsl_sf_coupling_3j(j2a,j2b,J2,m2a,m2b,-M2);
+//}
 
 
 
@@ -365,7 +366,7 @@ JMState TensorProduct( JMState jm1, JMState jm2, int J, int M)
 
   while(jm1.M2 >= m1_min)
   {
-    double clebsch = CG(jm1.J2, jm1.M2, jm2.J2, jm2.M2, J, M);
+    double clebsch = AngMom::CG(jm1.J2, jm1.M2, jm2.J2, jm2.M2, J, M);
 
 //  t_start = omp_get_wtime();
     if (abs(clebsch)>1e-4)

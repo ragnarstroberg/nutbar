@@ -18,7 +18,7 @@ class JMState
  public:
   int J2, T2, M2;//, pindx;
   vector<int> pindx;
-  vector<vector<part_type>> partition;
+  vector<part_type> partition;
   unordered_map<key_type,float> m_coefs;
   vector<MschemeOrbit> m_orbits;
   Profiler profiler;
@@ -59,7 +59,7 @@ JMState operator*(const double, const JMState&);
 
 key_type operator+( const key_type& lhs, const key_type& rhs);
 
-double CG(int j2a, int m2a, int j2b, int m2b, int J2, int M2);
+//double CG(int j2a, int m2a, int j2b, int m2b, int J2, int M2);
 
 #define JMState_h
 #endif

@@ -50,6 +50,8 @@ class TransitionDensity
   static vector<string> periodic_table;
   Profiler profiler;
   string densfile_name;
+  vector<map<pair<int,int>,vector<double>>> OBD_Ja; // One-body densities between proton or neutron JMstates
+  vector<map<pair<int,int>,vector<double>>> OBD_Jb; // One-body densities between proton or neutron JMstates
 
 
   TransitionDensity();
@@ -71,6 +73,8 @@ class TransitionDensity
   arma::mat CalcTBTD( int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int Lambda2);
   arma::mat ReadOBTD( int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int Lambda2, string fname);
   arma::mat ReadTBTD( int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int Lambda2, string fname);
+  void PrecalcJbasisOBTD(JBasis& jbasis);
+  double GetOBD_JBasis( JMState& jmstate_i, JMState& jmstate_f, int p, int q, int Lambda2);
   void SetupKets();
   void Jplus(vector<key_type>& mvecs_in, vector<double>& amp_in, int J2, int M2);
   void WriteEGV( string fname);
@@ -79,6 +83,8 @@ class TransitionDensity
   void GetAZFromFileName( );
   void ReadSPfile();
   void SetDensFile( string name ) ;
+//  int Index2(size_t p, size_t q) const {return p*(2*jorbits.size()-1-p)/2 + q;}
+  int Index2(size_t p, size_t q) const {return p*jorbits.size() + q;}
 
 
 };

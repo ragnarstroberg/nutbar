@@ -9,6 +9,7 @@
 
 #include "TransitionDensity.hh"
 #include "JMState.hh"
+#include "AngMom.hh"
 
 #define SQRT2 1.4142135623730950488
 
@@ -499,10 +500,10 @@ double TransitionDensity::OBTD(int J_index_i, int eigvec_i, int J_index_f, int e
      amp_vec_i.push_back(amp_i);
   }
 
-  double clebsch_fi = CG(J2i,Mi,Lambda2,mu,J2f,Mf);
+  double clebsch_fi = AngMom::CG2(J2i,Mi,Lambda2,mu,J2f,Mf);
   if (abs(clebsch_fi)<1e-9)
   {
-     clebsch_fi = CG(J2i,Mi+2,Lambda2,mu-2,J2f,Mf);
+     clebsch_fi = AngMom::CG2(J2i,Mi+2,Lambda2,mu-2,J2f,Mf);
      if (abs(clebsch_fi)<1e-9)
      {
         cout << " ERROR:    Still got zero Clebsch" << endl;
@@ -529,7 +530,7 @@ double TransitionDensity::OBTD(int J_index_i, int eigvec_i, int J_index_f, int e
     // convention: tilded destruction operator b~(m) = (-1)**(jb + mb) b(-m)
     //                                         b(m)  = (-1)**(jb -mb) b~(-m)
     int phase_b = (1-(j2_b-mb)%4);
-    double clebsch = CG(j2_a,ma,j2_b,-mb,Lambda2,mu) ;
+    double clebsch = AngMom::CG2(j2_a,ma,j2_b,-mb,Lambda2,mu) ;
 //    cout << "clebsch: " << j2_a << " " << ma << " " << j2_b << " " << -mb << " " << Lambda2 << " " << mu << endl;
 
     for (size_t iamp=0; iamp<amp_vec_i.size(); ++iamp)
@@ -610,10 +611,10 @@ double TransitionDensity::TBTD(int J_index_i, int eigvec_i, int J_index_f, int e
      amp_vec_i.push_back(amp_i);
   }
 
-  double clebsch_fi = CG(J2i,Mi,Lambda2,mu,J2f,Mf);
+  double clebsch_fi = AngMom::CG2(J2i,Mi,Lambda2,mu,J2f,Mf);
   if (abs(clebsch_fi)<1e-9)
   {
-     clebsch_fi = CG(J2i,Mi+2,Lambda2,mu-2,J2f,Mf);
+     clebsch_fi = AngMom::CG2(J2i,Mi+2,Lambda2,mu-2,J2f,Mf);
      if (abs(clebsch_fi)<1e-9)
      {
         cout << " ERROR:    Still got zero Clebsch" << endl;
@@ -643,7 +644,7 @@ double TransitionDensity::TBTD(int J_index_i, int eigvec_i, int J_index_f, int e
   {
     int Mcd = mu - Mab;
     int phasecd = (1- abs(J2cd - Mcd)%4); // phase from getting rid of the tildes
-    double clebsch_abcd = CG(J2ab,Mab,J2cd,Mcd,Lambda2,mu);
+    double clebsch_abcd = AngMom::CG2(J2ab,Mab,J2cd,Mcd,Lambda2,mu);
     if ( abs(clebsch_abcd)<1e-7) continue;
     int ma_min = max(-j2_a, Mab-j2_b);
     int ma_max = min(j2_a, Mab+j2_b);
@@ -652,7 +653,7 @@ double TransitionDensity::TBTD(int J_index_i, int eigvec_i, int J_index_f, int e
     for (int ma=ma_min;ma<=ma_max;ma+=2)
     {
       int mb=Mab-ma;
-      double clebsch_ab = CG(j2_a,ma, j2_b,mb, J2ab,Mab);
+      double clebsch_ab = AngMom::CG2(j2_a,ma, j2_b,mb, J2ab,Mab);
       if ( abs(clebsch_ab)<1e-7) continue;
       int ia = m_index_a - ( j2_a -ma )/2;
       int ib = m_index_b - ( j2_b -mb )/2;
@@ -664,7 +665,7 @@ double TransitionDensity::TBTD(int J_index_i, int eigvec_i, int J_index_f, int e
       for (int mc=mc_min;mc<=mc_max;mc+=2)
       {
         int md = -Mcd-mc;
-        double clebsch_cd = CG(j2_c,mc, j2_d, md, J2cd,-Mcd); // Mcd = -Mab, and another (-) comes from getting rid of the tildes
+        double clebsch_cd = AngMom::CG2(j2_c,mc, j2_d, md, J2cd,-Mcd); // Mcd = -Mab, and another (-) comes from getting rid of the tildes
         if ( abs(clebsch_cd)<1e-7) continue;
         int ic = m_index_c - ( j2_c -mc )/2;
         int id = m_index_d - ( j2_d -md )/2;
@@ -710,6 +711,8 @@ double TransitionDensity::TBTD(int J_index_i, int eigvec_i, int J_index_f, int e
 arma::mat TransitionDensity::CalcOBTD( int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int Lambda2)
 {
 
+  cout << "In CalcOBTD. size of jbasis_list_i = " << jbasis_list_i.size() << "  J_index_i = " << J_index_i << endl;
+  PrecalcJbasisOBTD(jbasis_list_i[J_index_i]);
   double t_start = omp_get_wtime();
 
   int Ji = Jlist_i[J_index_i];
@@ -754,8 +757,321 @@ arma::mat TransitionDensity::CalcOBTD( int J_index_i, int eigvec_i, int J_index_
 
 }
 
+void TransitionDensity::PrecalcJbasisOBTD(JBasis& jbasis)
+{
+  cout << "In PrecalcJbasisOBTD " << endl;
+  size_t njorb = jorbits.size();
+  // Loop over single-particle j-orbit indices
+  cout << "Start loop over i" << endl;
+  OBD_Ja.resize( Index2( njorb-1, njorb-1 )+1 );
+  OBD_Jb.resize( Index2( njorb-1, njorb-1 )+1 );
+  for (size_t p=0; p<njorb; ++p)
+  {
+    int j2p = m_orbits[jorbits[p]].j2;
+    int tz2p = m_orbits[jorbits[p]].tz2;
+    int qmin = 0;
+    cout << "p = " << p << " j2p, tz2p = " << j2p << " " << tz2p << endl;
+    // check if we're dealing with a-type or b-type nucleons (protons or neutrons)
+    bool atype = false;
+    bool btype = false;
+    int acount = 0;
+    int bcount = 0;
+    for (int ipart=0; ipart< jbasis.jmstates_a.front().partition.size(); ++ipart  )
+    {
+      if (jbasis.jmstates_a.front().partition[ipart] > 0 )
+      {
+        acount += jbasis.jmstates_a.front().partition[ipart];
+        if ( m_orbits[jorbits[ipart]].tz2 == tz2p )
+        {
+           atype = true;
+        }
+        break;
+      }
+    }
+    for (int ipart=0; ipart< jbasis.jmstates_b.front().partition.size(); ++ipart  )
+    {
+      if (jbasis.jmstates_b.front().partition[ipart] > 0 )
+      {
+        bcount += jbasis.jmstates_b.front().partition[ipart];
+        if ( m_orbits[jorbits[ipart]].tz2 == tz2p )
+        {
+           btype = true;
+        }
+        break;
+      }
+    }
+    if ( not (atype or btype) )
+    {
+      if ( acount == 0 ) atype=true;
+      if ( bcount == 0 ) btype=true;
+    }
+    if (atype and btype)
+    {
+      cout << "!!!! Error: ran into a partition that has both protons and neutrons. This shouldn't happen !!!!" << endl;
+    }
+    cout << "atype = " << atype << "   btype = " << btype << endl;
+
+//    for (int ipart : jbasis.jmstates_a.front().partition  )
+//    {
+//      cout << ipart << "  ";
+//    }
+//      cout << endl;
+//    cout << " b partitions:  ";
+//    for (int ipart : jbasis.jmstates_b.front().partition  )
+//    {
+//      cout << ipart << "  ";
+//    }
+//      cout << endl;
+//    continue;
+//    if (basename_i==basename_f and Ji==Jf and eigvec_i==eigvec_f) jmin = i;
+    for (size_t q=qmin; q<njorb; ++q)
+    {
+      int j2q = m_orbits[jorbits[q]].j2;
+      int tz2q = m_orbits[jorbits[q]].tz2;
+      if (tz2p != tz2q) continue;
+      // make sure tz_j = tz_i, then decide if we should loop over a-type or b-type orbits.
+//  size_t n_ja = jbasis.jmstates_a.size();
+      auto& jmstates = (atype) ? jbasis.jmstates_a : jbasis.jmstates_b;
+      auto& OBD_J = (atype) ? OBD_Ja : OBD_Jb;
+      size_t number_jstates = jmstates.size();
+       for ( size_t index_i=0; index_i< number_jstates; ++index_i )
+       {
+        auto partition_to_match = jmstates[index_i].partition;
+        cout << "p,q = " << p << " " << q << "  index_i = " << index_i << "   partition = ";
+        for (auto part : partition_to_match) cout << part << "  ";
+        cout << endl;
+        if (partition_to_match[q]==0) continue;
+        partition_to_match[q]--;
+        partition_to_match[p]++;
+        cout << "partition to match = ";
+        for (auto part : partition_to_match) cout << part << "  ";
+        cout << endl;
+        int J2i = jmstates[index_i].J2;
+        if (partition_to_match[p] > j2p+1) continue;
+        for ( size_t index_f=index_i; index_f<number_jstates; ++index_f )
+        {
+         if (jmstates[index_f].partition != partition_to_match) continue;
+         cout << "Found a match!  index_i = " << index_i << "  index_f = " << index_f << endl;
+         int J2f = jmstates[index_f].J2;
+         int Lambda2_min = max( abs(J2i-J2f), abs(j2p-j2q) );
+         int Lambda2_max = min(J2i+J2f, j2p+j2q);
+         if (Lambda2_min > Lambda2_max) continue;
+         cout << "p,q = " << p << " " << q << "  Index2(p,q) = " << Index2(p,q) << endl;
+         cout << "about to assign OBD_J[" << Index2(p,q) << "]  (size of OBD_J = " << OBD_J.size() << ")  indices: " << index_i << " " << index_f << endl;
+         OBD_J[Index2(p,q)][{index_i,index_f}].resize((Lambda2_max-Lambda2_min)/2+1);
+         /// First, fill a structure that says which basis states connect to which
+//          if (PartitionsMatch)...
+           /// create vector for possible range of Lambda
+        }
+       }
+    }
+  }
 
 
+ ////// Now go through everything and obtain the obtd.
+
+ for (int index_pq=0; index_pq<OBD_Ja.size(); ++index_pq)
+ {
+   size_t p = index_pq / jorbits.size();
+   size_t q = index_pq % jorbits.size();
+   int j2p = m_orbits[jorbits[p]].j2;
+   int tz2p = m_orbits[jorbits[p]].tz2;
+   int j2q = m_orbits[jorbits[q]].j2;
+   int tz2q = m_orbits[jorbits[q]].tz2;
+   for ( auto& iter_J : OBD_Ja[index_pq] )
+   {
+     size_t index_i = iter_J.first.first;
+     size_t index_f = iter_J.first.second;
+     auto& jmstate_i = jbasis.jmstates_a[index_i];
+     auto& jmstate_f = jbasis.jmstates_a[index_f];
+     int J2i = jmstate_i.J2;
+     int J2f = jmstate_f.J2;
+     int Lambda2_min = max(abs(J2i-J2f),abs(j2p-j2q));
+     int Lambda2_max = min(J2i+J2f,j2p+j2q);
+     for (int Lambda2=Lambda2_min; Lambda2<=Lambda2_max; Lambda2+=2)
+     {
+       double obd = GetOBD_JBasis( jmstate_i, jmstate_f, p, q, Lambda2);
+       iter_J.second[(Lambda2-Lambda2_min)/2] = obd;
+     }
+   }
+ }
+ for (int index_pq=0; index_pq<OBD_Jb.size(); ++index_pq)
+ {
+   size_t p = index_pq / jorbits.size();
+   size_t q = index_pq % jorbits.size();
+   int j2p = m_orbits[jorbits[p]].j2;
+   int tz2p = m_orbits[jorbits[p]].tz2;
+   int j2q = m_orbits[jorbits[q]].j2;
+   int tz2q = m_orbits[jorbits[q]].tz2;
+   for ( auto& iter_J : OBD_Jb[index_pq] )
+   {
+     size_t index_i = iter_J.first.first;
+     size_t index_f = iter_J.first.second;
+     auto& jmstate_i = jbasis.jmstates_b[index_i];
+     auto& jmstate_f = jbasis.jmstates_b[index_f];
+     int J2i = jmstate_i.J2;
+     int J2f = jmstate_f.J2;
+     int Lambda2_min = max(abs(J2i-J2f),abs(j2p-j2q));
+     int Lambda2_max = min(J2i+J2f,j2p+j2q);
+     for (int Lambda2=Lambda2_min; Lambda2<=Lambda2_max; Lambda2+=2)
+     {
+       double obd = GetOBD_JBasis( jmstate_i, jmstate_f, p, q, Lambda2);
+       iter_J.second[(Lambda2-Lambda2_min)/2] = obd;
+     }
+   }
+ }
+
+
+  cout << "Done with setup. Heres OBD_Ja:" << endl;
+  for (int index_pq=0; index_pq<OBD_Ja.size(); ++index_pq)
+  {
+    cout << "index_pq = " << index_pq << "  i = " << index_pq / jorbits.size() << "  j = " << index_pq % jorbits.size() << endl;
+    for (auto& iter_J : OBD_Ja[index_pq] )
+    {
+      cout << "[" << iter_J.first.first << "," << iter_J.first.second << "] =>  (";
+      for (auto l : iter_J.second) cout << l << ",";
+      cout << ")   J values " << jbasis.jmstates_a[iter_J.first.first].J2/2 << " " << jbasis.jmstates_a[iter_J.first.second].J2/2<< endl;
+    }
+  }
+  cout << "And heres OBD_Jb:" << endl;
+  for (int index_pq=0; index_pq<OBD_Jb.size(); ++index_pq)
+  {
+    cout << "index_pq = " << index_pq << "  i = " << index_pq / jorbits.size() << "  j = " << index_pq % jorbits.size() << endl;
+    for (auto& iter_J : OBD_Jb[index_pq] )
+    {
+      cout << "[" << iter_J.first.first << "," << iter_J.first.second << "] =>  (";
+      for (auto l : iter_J.second) cout << l << ",";
+      cout << ")   J values " << jbasis.jmstates_b[iter_J.first.first].J2/2 << " " << jbasis.jmstates_b[iter_J.first.second].J2/2<< endl;
+    }
+  }
+
+
+
+
+}
+
+
+
+double TransitionDensity::GetOBD_JBasis( JMState& jmstate_i, JMState& jmstate_f, int p, int q, int Lambda2)
+{
+
+  int J2i = jmstate_i.J2;
+  int J2f = jmstate_f.J2;
+  if ( not AngMom::Triangle(J2i,J2f,Lambda2) ) return 0;
+ 
+  // Initial choice of M projections
+  int mu = Lambda2%2;
+  int Mi = J2i%2;
+  int Mf = J2f%2;
+
+  int m_index_p = jorbits[p];
+  int m_index_q = jorbits[q];
+  int j2p = m_orbits[m_index_p].j2;
+  int j2q = m_orbits[m_index_q].j2;
+//  cout << "    ja,jb = " << j2_a << " " << j2_b << endl;
+
+//  cout << "    a,b = " << m_index_a << " " << m_index_b << endl;
+//  cout <<  "     " << m_orbits[m_index_a].n << " " << m_orbits[m_index_a].l2/2 << " " << j2_a << " " << m_orbits[m_index_a].tz2
+//       <<  "     " << m_orbits[m_index_b].n << " " << m_orbits[m_index_b].l2/2 << " " << j2_b << " " << m_orbits[m_index_b].tz2 << endl;
+
+  m_index_p += (j2p - m_orbits[m_index_p].mj2)/2;
+  m_index_q += (j2q - m_orbits[m_index_q].mj2)/2;
+
+  
+  // find m-scheme orbits so that m_a = m_b, which will work for mu=0
+  double obd = 0;
+  int mp_min = max(-j2p,mu-j2q);
+  int mp_max = min(j2p,mu+j2q);
+
+//  vector<vector<mvec_type>> keys_i;
+//  vector<key_type> keys_i;
+//  vector<double> amp_vec_i;
+////  cout << "size of amplitudes_i = " << amplitudes_i.size() << endl;
+//  for (auto& it_amp : amplitudes_i )
+//  {
+//     double amp_i = it_amp.second[J_index_i][eigvec_i];
+//     if (abs(amp_i)<1e-7) continue;
+//     auto& key = it_amp.first;
+//     keys_i.push_back( key );
+//     amp_vec_i.push_back(amp_i);
+//  }
+  vector<key_type> keys_i;
+  vector<double> amp_vec_i;
+  for (auto& it_amp : jmstate_i.m_coefs)
+  {
+    keys_i.push_back(it_amp.first);
+    amp_vec_i.push_back(it_amp.second);
+  }
+
+  // We're inverting the Wigner-Eckart theorem, which involves dividing by
+  // a Clebsch-Gordan coefficient. If the CG is zero, try a different projection.
+  // TODO: Decide if it's better to do Jplus on the initial or final state
+  double clebsch_fi = AngMom::CG2(J2i,Mi,Lambda2,mu,J2f,Mf);
+  if (abs(clebsch_fi)<1e-9)
+  {
+     clebsch_fi = AngMom::CG2(J2i,Mi+2,Lambda2,mu-2,J2f,Mf);
+     if (abs(clebsch_fi)<1e-9)
+     {
+        cout << " ERROR:    Still got zero Clebsch" << endl;
+        return 0;
+     }
+     else
+     {
+       Jplus(keys_i, amp_vec_i, J2i, Mi);
+       Mi += 2;
+       mu -=2;
+     }
+  }
+
+
+  for ( int mp=mp_min;mp<=mp_max;mp+=2)
+  {
+    int mq = mp - mu;
+    int ip = m_index_p - ( j2p -mp )/2;
+    int iq = m_index_q - ( j2q -mq )/2;
+
+//    uint64_t mask_a = (0x1L<<ia);
+//    uint64_t mask_b = (0x1L<<ib);
+
+    // convention: tilded destruction operator b~(m) = (-1)**(jb + mb) b(-m)
+    //                                         b(m)  = (-1)**(jb -mb) b~(-m)
+    int phase_q = (1-(j2q-mq)%4);
+    double clebsch = AngMom::CG2(j2p,mp,j2q,-mq,Lambda2,mu) ;
+//    cout << "clebsch: " << j2_a << " " << ma << " " << j2_b << " " << -mb << " " << Lambda2 << " " << mu << endl;
+
+    for (size_t iamp=0; iamp<amp_vec_i.size(); ++iamp)
+    {
+      auto& key = keys_i[iamp];
+      auto& amp_i = amp_vec_i[iamp];
+
+//      if ( not( key[0] & mask_b )) continue;
+//      if ( ia != ib and   ( key[0] & mask_a) ) continue;
+      if ( not key[iq] ) continue;
+      auto new_key = key;
+      new_key.set(iq,0);
+      if ( new_key[ip] ) continue;
+      new_key.set(ip,1);
+//      new_key[0] &= ~mask_b;  // remove orbit b
+//      new_key[0] |=  mask_a;  // add to orbit a
+//      if (amplitudes_f.find(new_key) == amplitudes_f.end() ) continue;
+      if (jmstate_f.m_coefs.find(new_key) == jmstate_f.m_coefs.end() ) continue;
+
+
+      int phase_ladder = 1;
+//      for (int iphase=min(ia,ib)+1;iphase<max(ia,ib);++iphase) if( (key[0] >>iphase )&0x1L) phase_ladder *=-1;
+      for (int iphase=min(ip,iq)+1;iphase<max(ip,iq);++iphase) if( key[iphase]) phase_ladder *=-1;
+      double amp_f = jmstate_f.m_coefs[new_key];
+
+      obd += clebsch * amp_i * amp_f * phase_ladder * phase_q;
+    }
+  }
+  
+  obd *= sqrt((J2f+1.)/(Lambda2+1)) / clebsch_fi;
+
+  return obd;
+
+
+}
 
 
 

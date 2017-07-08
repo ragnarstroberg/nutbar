@@ -58,6 +58,7 @@ void NuBasis::ReadFile(string fname)
     infile.read((char*)&nwords, sizeof(nwords));
     partition[isp].resize(nwords/sizeof(part_type));
     infile.read((char*)&partition[isp][0], nwords);
+    cout << "Read " << nwords << " words of partition.  pindx = " << pindx[isp] << endl;
     infile.read((char*)&nwords, sizeof(nwords));
     
     if (ibf[isp]>0)

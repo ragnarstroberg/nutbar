@@ -19,7 +19,14 @@ ifeq ($(VERBOSE),on)
   FLAGS += -DVERBOSE
 endif
 
-OBJ = NuVec.o NuBasis.o NuProj.o JMState.o JBasis.o TransitionDensity.o Profiler.o
+BUILDVERSION = $(shell git branch -v | grep '*' | awk '{printf "%s_%s",$$2,$$3}' )
+ifeq (HEAD,$(findstring BUILDVERSION, HEAD))
+  BUILDVERSION = $(shell git branch -v | grep '*' | awk '{printf "HEAD_%s",$$6}'  )
+endif
+
+FLAGS += -DBUILDVERSION=\"$(BUILDVERSION)\"
+
+OBJ = NuVec.o NuBasis.o NuProj.o JMState.o JBasis.o TransitionDensity.o Profiler.o AngMom.o
 EXE = nutbar
 #EXE = nutbar_test
 

@@ -51,6 +51,9 @@ arma::field<arma::mat> operator+(arma::field<arma::mat>&,arma::field<arma::mat>&
 int main(int argc, char** argv)
 {
 
+#ifdef BUILDVERSION
+  cout << "nutbar  build version " << BUILDVERSION << endl;
+#endif
   // TransitionDensity class does all the heavy lifting
   Profiler profiler;
   TransitionDensity trans;
