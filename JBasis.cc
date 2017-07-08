@@ -159,7 +159,6 @@ int JBasis::GetNaiveMschemeDimension() const
       if (mstates_a[jst.M2].count(k)<1 and jst.M2==3)
       {
         mstates_a[jst.M2].insert(k);
-        cout << "Inserted " << itm.first <<  " J,M = (" << jst.J2 <<  " " << jst.M2 << ")   k = " << k << endl;
       }
     }
   }
@@ -174,21 +173,16 @@ int JBasis::GetNaiveMschemeDimension() const
     }
   }
   int nm = 0;
-  cout << "J2,M2 = " << J2 << " " << M2 << endl;
   for (auto& it_a : mstates_a)
   {
     int ma = it_a.first;
     int mb = abs(J2 - ma);
-    cout << "ma = " << ma << endl;
     if (mstates_b.count(mb))
     {
-      cout << "ma = " << ma << "  mb = " << mb << "  sizes = " << mstates_a[ma].size() << " " << mstates_b[mb].size() << endl;
       nm += (min(ma,mb)+1)*it_a.second.size() * mstates_b[mb].size();
-      for ( auto vecb : mstates_b[mb]) cout << bitset<64>(vecb) << endl;
     }
   }
 //  cout << "dim a: " << mstates_a.size() << "   dim b: " << mstates_b.size() << "  product = " << mstates_a.size() * mstates_b.size() << endl;
-  cout << "dim = " << nm << endl;
   return mstates_a.size() * mstates_b.size();
 
 }

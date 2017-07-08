@@ -165,9 +165,10 @@ int main(int argc, char** argv)
 
 
   trans.SetupKets();
+  string densityfilename = "nutbar_densities_" + settings.basename_vectors_f.substr( settings.basename_vectors_f.find_last_of("/")+1 ) + ".dat";
 
   if ( find( begin(settings.options), end(settings.options), "read_dens") == end(settings.options)  )
-    trans.SetDensFile("nutbar_densities.dat");
+    trans.SetDensFile(densityfilename);
  
 // Terrible nomenclature. Here Ji is an index for the array of J values of the initial state.
 // This really should be changed.
@@ -200,8 +201,8 @@ int main(int argc, char** argv)
        if ( find( begin(settings.options), end(settings.options), "read_dens") != end(settings.options) )
        {
          cout << "Reading densities from file..." << endl;
-         obtd = trans.ReadOBTD(Ji,ivec,Jf,fvec,Lambda*2,"nutbar_densities.dat");
-         tbtd = trans.ReadTBTD(Ji,ivec,Jf,fvec,Lambda*2,"nutbar_densities.dat");
+         obtd = trans.ReadOBTD(Ji,ivec,Jf,fvec,Lambda*2,densityfilename);
+         tbtd = trans.ReadTBTD(Ji,ivec,Jf,fvec,Lambda*2,densityfilename);
        }
        else
        {

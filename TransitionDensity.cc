@@ -322,7 +322,6 @@ void TransitionDensity::ReadFiles( )
     total_number_levels_f += blank_vector_f.back().size();
   }
 
-  cout << "done reading files" << endl;
 }
 
 /// Calculate the Mscheme wave functions for each eigenstate.
@@ -340,23 +339,18 @@ void TransitionDensity::CalculateMschemeAmplitudes()
       if (Jlist_i[iJ] != Jlist_f[iJ])
       {
         same_f_i = false;
-        cout << "false because Jlist_i[" << iJ << "] = " << Jlist_i[iJ] << "   and  Jlist_f[" << iJ << "] = " << Jlist_f[iJ] << endl;
         break;
       }
       if (max_states_per_J_i[Jlist_i[iJ]] < max_states_per_J_f[Jlist_f[iJ]])
       {
-        cout << "false because max_states_per_J_i[" << Jlist_i[iJ] << "] = " << max_states_per_J_i[Jlist_i[iJ]] << "   "
-             << " and  max_states_per_J_f[" << Jlist_f[iJ] << "] = " << max_states_per_J_f[Jlist_f[iJ]] << endl;
         same_f_i = false;
         break;
       }
     }
   }
-  cout << " same_f_i = " << same_f_i << endl;
   if (same_f_i) amplitudes_f = amplitudes_i;
   else
      CalculateMschemeAmplitudes_fi( nuvec_list_f, jbasis_list_f, max_states_per_J_f, blank_vector_f, amplitudes_f);
-  cout << "done" << endl;
 }
 
 
@@ -428,22 +422,17 @@ void TransitionDensity::CalculateMschemeAmplitudes_fi(vector<NuVec>& nuvec_list,
    t_start_inner = omp_get_wtime();
 
    // Now accumulate amplitudes from all threads
-   cout << "accumulate. ivec = " << ivec << endl;
    {
      for (int ith=0;ith<nthreads;++ith)
      {
-       cout << "before: ith = " << ith << "   amplitudes size = " << amplitudes.size() << endl;
        for (auto& it_amp : local_amplitudes[ith] )
        {
          auto& key = it_amp.first;
          if( amplitudes.find(key) == amplitudes.end() ) amplitudes[key] = blank_vector;
          for (size_t ilevel=0;ilevel<imax;++ilevel) amplitudes[key][ivec][ilevel] +=  it_amp.second[ilevel];
        }
-       cout << "after: ith = " << ith << "   amplitudes size = " << amplitudes.size() << endl;
      }
    }
-   int icount = 0;
-   for (auto& iter : amplitudes) cout << setw(3) << icount++ << ":  " << iter.first << "  " << iter.first.to_ulong() << "   " << iter.second[0][0] << endl;
    profiler.timer["amplitudes_accumulate"] += omp_get_wtime() - t_start_inner;
   }
 
