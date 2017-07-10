@@ -20,10 +20,10 @@ class NuVec
 {
  public:
 
-  int32_t no_state,no_level;
+  int32_t no_state,no_level; // states are the basis vectors, levels are the eigenvectors.
   int J2;
   vector<float> alpha; //eigenvalues
-  vector<vector<float>> coefT;
+  vector<vector<float>> coefT; // eigenvectors.
   
   NuVec();
   NuVec(int J2);

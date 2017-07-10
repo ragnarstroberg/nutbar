@@ -176,6 +176,7 @@ void TransitionDensity::ReadFiles( )
   cout << "TransitionDensity::ReadFiles -- Starting loop over Jlist_i" << endl;
 #endif
 
+  jbasis_i = JBasis( sps_file_name, Afiles_i, Bfiles_i, Jlist_i ); // Newly added...
   for (int Jtot : Jlist_i )
   {
     #ifdef VERBOSE
@@ -185,7 +186,7 @@ void TransitionDensity::ReadFiles( )
       for ( auto b : Bfiles_i ) cout << " " << b;
       cout << ")  " << Jtot << " " << MJtot_i << endl;;
     #endif
-    jbasis_list_i.emplace_back( JBasis( sps_file_name, Afiles_i, Bfiles_i, Jtot, MJtot_i));
+//    jbasis_list_i.emplace_back( JBasis( sps_file_name, Afiles_i, Bfiles_i, Jtot, MJtot_i));
     #ifdef VERBOSE
       cout << "TransitionDensity::ReadFiles -- done with emplace_back" << endl;
     #endif
@@ -242,17 +243,19 @@ void TransitionDensity::ReadFiles( )
     if ( find( begin(Bfiles_i), end(Bfiles_i), bfile) == end(Bfiles_i) ) initial_final_same = false;
   }
 
+  
+  jbasis_f = JBasis( sps_file_name, Afiles_f, Bfiles_f, Jlist_f ); // Newly added...
   for (int Jtot : Jlist_f )
   {
     auto ji_iter = find( begin(Jlist_i), end(Jlist_i), Jtot);
-    if (initial_final_same and ji_iter != end(Jlist_i) )
-    {
-      jbasis_list_f.emplace_back( jbasis_list_i[ ji_iter-begin(Jlist_i) ] );
-    }
-    else
-    {
-      jbasis_list_f.emplace_back( JBasis( sps_file_name, Afiles_f, Bfiles_f, Jtot, MJtot_f));
-    }
+//    if (initial_final_same and ji_iter != end(Jlist_i) )
+//    {
+//      jbasis_list_f.emplace_back( jbasis_list_i[ ji_iter-begin(Jlist_i) ] );
+//    }
+//    else
+//    {
+//      jbasis_list_f.emplace_back( JBasis( sps_file_name, Afiles_f, Bfiles_f, Jtot, MJtot_f));
+//    }
   
   // Guess the name of the xvc file
     ostr.str("");
@@ -292,7 +295,8 @@ void TransitionDensity::ReadFiles( )
 
 //  m_orbits = jbasis_list_i[0].nubasis_a.m_orbits;
 //  m_orbits = jbasis_list_i[0].nubasis.m_orbits;
-  m_orbits = jbasis_list_i[0].m_orbits;
+//  m_orbits = jbasis_list_i[0].m_orbits;
+  m_orbits = jbasis_i.m_orbits;
   jorbits.clear();
   for (size_t i=0;i<m_orbits.size();++i )
   {
@@ -329,7 +333,8 @@ void TransitionDensity::ReadFiles( )
 void TransitionDensity::CalculateMschemeAmplitudes()
 {
   cout << "start CalculateMschemeAmplitudes" << endl;
-  CalculateMschemeAmplitudes_fi( nuvec_list_i, jbasis_list_i, max_states_per_J_i, blank_vector_i, amplitudes_i);
+//  CalculateMschemeAmplitudes_fi( nuvec_list_i, jbasis_list_i, max_states_per_J_i, blank_vector_i, amplitudes_i);
+  CalculateMschemeAmplitudes_fi( nuvec_list_i, jbasis_i, max_states_per_J_i, blank_vector_i, amplitudes_i);
   bool same_f_i = true;
   if (basename_i != basename_f or Jlist_i.size() != Jlist_f.size()) same_f_i = false;
   if (same_f_i)
@@ -350,7 +355,8 @@ void TransitionDensity::CalculateMschemeAmplitudes()
   }
   if (same_f_i) amplitudes_f = amplitudes_i;
   else
-     CalculateMschemeAmplitudes_fi( nuvec_list_f, jbasis_list_f, max_states_per_J_f, blank_vector_f, amplitudes_f);
+//     CalculateMschemeAmplitudes_fi( nuvec_list_f, jbasis_list_f, max_states_per_J_f, blank_vector_f, amplitudes_f);
+     CalculateMschemeAmplitudes_fi( nuvec_list_f, jbasis_f, max_states_per_J_f, blank_vector_f, amplitudes_f);
 }
 
 
@@ -361,7 +367,8 @@ void TransitionDensity::CalculateMschemeAmplitudes()
 // if we call a level |J> and a state |j> and an m-scheme determinant |m>,
 // this function evaluates   |J> = sum_{j,m} |m><m|j><j|J>.
 //
-void TransitionDensity::CalculateMschemeAmplitudes_fi(vector<NuVec>& nuvec_list, vector<JBasis>& jbasis_list, unordered_map<int,int>& max_states_per_J, vector<vector<float>>& blank_vector, unordered_map< key_type, vector<vector<float>> >& amplitudes)
+//void TransitionDensity::CalculateMschemeAmplitudes_fi(vector<NuVec>& nuvec_list, vector<JBasis>& jbasis_list, unordered_map<int,int>& max_states_per_J, vector<vector<float>>& blank_vector, unordered_map< key_type, vector<vector<float>> >& amplitudes)
+void TransitionDensity::CalculateMschemeAmplitudes_fi(vector<NuVec>& nuvec_list, JBasis& jbasis, unordered_map<int,int>& max_states_per_J, vector<vector<float>>& blank_vector, unordered_map< key_type, vector<vector<float>> >& amplitudes)
 {
   double t_start = omp_get_wtime();
   int nthreads = omp_get_max_threads();
@@ -369,13 +376,16 @@ void TransitionDensity::CalculateMschemeAmplitudes_fi(vector<NuVec>& nuvec_list,
   for (auto m : max_states_per_J) cout << m.first << ", " << m.second << ";  ";
   cout << endl;
   cout << "Jvals :  ";
-  for (auto& jb : jbasis_list) cout << jb.J2/2 << " ";
+  for (auto& nv : nuvec_list) cout << nv.J2/2 << " ";
   cout << endl;
+  // Choose the MJ2 value equal to the minimum J in the basis. I do this because m-scheme dimension grows with decreasing M.
+  int MJ2 = (*min_element(begin(jbasis.basis_states),end(jbasis.basis_states),jbasis.basis_states.value_comp())).first % 2 ;
   for (size_t ivec=0; ivec<nuvec_list.size(); ++ivec)
   {
    const auto& nuvec = nuvec_list[ivec];
-   const auto& jbasis = jbasis_list[ivec];
-   jbasis.GetNaiveMschemeDimension();
+   int J2 = nuvec.J2;
+//   const auto& jbasis = jbasis_list[ivec];
+   cout << "Naive m-scheme dimension = " << jbasis.GetNaiveMschemeDimension(J2);
    int imax = nuvec.no_level;
   #ifdef VERBOSE
    cout << "ivec = " << ivec << endl;
@@ -386,10 +396,11 @@ void TransitionDensity::CalculateMschemeAmplitudes_fi(vector<NuVec>& nuvec_list,
    cout << "imax = " << imax << endl;
 
 
-   if (nuvec.no_state > jbasis.basis_states.size() )
+//   if (nuvec.no_state > jbasis.basis_states.size() )
+   if (nuvec.no_state > jbasis.basis_states[J2].size() )
    {
-     cout << "ERROR -- TransitionDensity::CalculateMschemeAmplitudes_fi -- nuvec.no_state = " << nuvec.no_state << ",  basis_states.size() = " << jbasis.basis_states.size()
-          << "   ivec = " << ivec << "  J = " << jbasis.J2/2 << endl;
+     cout << "ERROR -- TransitionDensity::CalculateMschemeAmplitudes_fi -- nuvec.no_state = " << nuvec.no_state << ",  basis_states.size() = " << jbasis.basis_states[J2].size()
+          << "   ivec = " << ivec << "  J = " << nuvec.J2/2 << endl;
      return;
    }
   
@@ -406,7 +417,8 @@ void TransitionDensity::CalculateMschemeAmplitudes_fi(vector<NuVec>& nuvec_list,
    {
      int thread_num = omp_get_thread_num();
 //     double t_getstate = omp_get_wtime();
-     const JMState jmst = jbasis.GetBasisState(istate);
+//     const JMState jmst = jbasis.GetBasisState(istate);
+     const JMState jmst = jbasis.GetBasisState(istate,J2,MJ2);  // can we be smarter about picking an initial projection?
 //     profiler.timer["GetBasisState"] += omp_get_wtime() - t_getstate;
      for (auto& it_mstate : jmst.m_coefs)
      {
@@ -454,9 +466,10 @@ double TransitionDensity::OBTD(int J_index_i, int eigvec_i, int J_index_f, int e
 //  cout << "  In OBTD " << J2i << " " << J2f << " " << J_index_i << " " << J_index_f << "  " << eigvec_i << " " << eigvec_f << endl;
 //  cout << "    with Lambda2 = " << Lambda2 << endl;
  
-  int mu = Lambda2%2;
+//  int mu = Lambda2%2;
   int Mi = J2i%2;
   int Mf = J2f%2;
+  int mu = Mf-Mi;
 
   int j2_a = m_orbits[m_index_a].j2;
   int j2_b = m_orbits[m_index_b].j2;
@@ -486,7 +499,15 @@ double TransitionDensity::OBTD(int J_index_i, int eigvec_i, int J_index_f, int e
      auto& key = it_amp.first;
      keys_i.push_back( key );
      amp_vec_i.push_back(amp_i);
+//     cout << " key_i : " << key << "    " << amp_i << endl;
   }
+
+
+//  cout << "final amplitudes: " << endl;
+//  for ( auto& it_amp : amplitudes_f )
+//  {
+//    cout << " key_f : " << it_amp.first << "    " << it_amp.second[J_index_i][eigvec_i] << endl;
+//  }
 
   double clebsch_fi = CG(J2i,Mi,Lambda2,mu,J2f,Mf);
   if (abs(clebsch_fi)<1e-9)
@@ -542,6 +563,7 @@ double TransitionDensity::OBTD(int J_index_i, int eigvec_i, int J_index_f, int e
 //      for (int iphase=min(ia,ib)+1;iphase<max(ia,ib);++iphase) if( (key[0] >>iphase )&0x1L) phase_ladder *=-1;
       for (int iphase=min(ia,ib)+1;iphase<max(ia,ib);++iphase) if( key[iphase]) phase_ladder *=-1;
       double amp_f = amplitudes_f[new_key][J_index_f][eigvec_f];
+//      cout << "      new_key: " << new_key << "      " << amp_f << endl;
 
       obd += clebsch * amp_i * amp_f * phase_ladder * phase_b;
     }
@@ -561,9 +583,10 @@ double TransitionDensity::TBTD(int J_index_i, int eigvec_i, int J_index_f, int e
 
   int J2i = Jlist_i[J_index_i];
   int J2f = Jlist_f[J_index_f];
-  int mu = Lambda2%2;
+//  int mu = Lambda2%2;
   int Mi = J2i%2;
   int Mf = J2f%2;
+  int mu = Mf-Mi;
   
   int j2_a = m_orbits[m_index_a].j2;
   int j2_b = m_orbits[m_index_b].j2;
@@ -1300,7 +1323,8 @@ void TransitionDensity::WriteEGV(string fname)
   int n_core_orbits = mscheme_orbits.size();
 //  for (auto& morbit : jbasis_list_i[0].nubasis_a.m_orbits)
 //  for (auto& morbit : jbasis_list_i[0].nubasis.m_orbits)
-  for (auto& morbit : jbasis_list_i[0].m_orbits)
+//  for (auto& morbit : jbasis_list_i[0].m_orbits)
+  for (auto& morbit : jbasis_i.m_orbits)
   {
      mscheme_orbits.push_back ( morbit );
   }

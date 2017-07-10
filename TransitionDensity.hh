@@ -35,8 +35,10 @@ class TransitionDensity
   int MJtot_f;
   int Nshell;
   int A_i,Z_i,A_f,Z_f,Acore,Zcore;
-  vector<JBasis> jbasis_list_i;
-  vector<JBasis> jbasis_list_f;
+//  vector<JBasis> jbasis_list_i;
+//  vector<JBasis> jbasis_list_f;
+  JBasis jbasis_i;
+  JBasis jbasis_f;
   vector<NuVec> nuvec_list_i;
   vector<NuVec> nuvec_list_f;
   unordered_map< key_type, vector<vector<float>> > amplitudes_i;
@@ -57,7 +59,8 @@ class TransitionDensity
   TransitionDensity(vector<int> jlist_i, vector<int> jlist_f);
   void ReadFiles( );
   void CalculateMschemeAmplitudes();
-  void CalculateMschemeAmplitudes_fi(vector<NuVec>& , vector<JBasis>& , unordered_map<int,int>&, vector<vector<float>>&, unordered_map< key_type, vector<vector<float>> >& );
+//  void CalculateMschemeAmplitudes_fi(vector<NuVec>& , vector<JBasis>& , unordered_map<int,int>&, vector<vector<float>>&, unordered_map< key_type, vector<vector<float>> >& );
+  void CalculateMschemeAmplitudes_fi(vector<NuVec>& , JBasis& , unordered_map<int,int>&, vector<vector<float>>&, unordered_map< key_type, vector<vector<float>> >& );
   void SetAZ(int a, int z){A_i=a;Z_i=z;A_f=a;Z_f=a;};
   void SetAZ_i(int a, int z){A_i=a;Z_i=z;};
   void SetAZ_f(int a, int z){A_f=a;Z_f=z;};
