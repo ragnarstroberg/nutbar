@@ -12,7 +12,7 @@ class JBasis
 {
  public:
   int J2,M2;
-  int N_p, N_n;
+  int N_p, N_n; // these are not used.
 //  vector<JMState> basis_states;
   vector<array<int,4>> basis_states;
   vector<JMState> jmstates_a, jmstates_b;
