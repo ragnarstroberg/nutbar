@@ -19,7 +19,7 @@ JMState::JMState()
 
 JMState::JMState(const NuBasis& nubasis, const NuProj& nuproj, int istate)
  : J2(nuproj.j[istate]), T2(nuproj.t[istate]), M2(nuproj.j[istate]),pindx(1,nuproj.pindx[istate]),
-  m_orbits(nubasis.m_orbits)
+  partition(nubasis.partition),m_orbits(nubasis.m_orbits)
 {
   for (int iibf=0;iibf<nubasis.ibf[pindx[0]-1];++iibf)
   {
