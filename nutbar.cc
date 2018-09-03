@@ -113,6 +113,8 @@ int main(int argc, char** argv)
     trans.WriteEGV("mbpt.egv");
     trans.WriteTRDENS_input("trdens.in");
   }
+  // check if we should write out a more detailed log file
+  bool write_log = ( find( begin(settings.options), end(settings.options), "log") != end(settings.options) );
   
   cout << "operators: [ " ;
   for (auto ops : settings.scalar_op_files) cout << ops << " ";
@@ -136,12 +138,13 @@ int main(int argc, char** argv)
     if (Lambda2 != Lambda or RankT2!=RankT or parity2 != parity)
     {
       cout << "ERROR Tensor rank mismatch between files " << settings.tensor_op_files[0] << "  and  " << settings.tensor_op_files[1] << endl;
+      cout << " Lambda: " << Lambda << "," << Lambda2 << "   Tz: " << RankT << "," << RankT2 << "  parity: " << parity << "," << parity2 << std::endl;
       return 1;
     }
   }
   
   
-  vector<double> OpScalar0b(settings.scalar_op_files.size());
+  vector<double>    OpScalar0b(settings.scalar_op_files.size());
   vector<arma::mat> OpScalar1b(settings.scalar_op_files.size());
   vector<arma::mat> OpScalar2b(settings.scalar_op_files.size());
   
@@ -166,6 +169,9 @@ int main(int argc, char** argv)
 
   trans.SetupKets();
   string densityfilename = "nutbar_densities_" + settings.basename_vectors_f.substr( settings.basename_vectors_f.find_last_of("/")+1 ) + ".dat";
+  string logfilename = "nutbar_" + settings.basename_vectors_f.substr( settings.basename_vectors_f.find_last_of("/")+1 ) + ".log";
+  ofstream logfile;
+  if (write_log) logfile.open(logfilename);
 
   if ( find( begin(settings.options), end(settings.options), "read_dens") == end(settings.options)  )
     trans.SetDensFile(densityfilename);
@@ -215,12 +221,69 @@ int main(int argc, char** argv)
        {
          double obme = arma::accu( TensorOp1b % obtd );
          TensorME1(Jf,Ji)(fvec,ivec) = obme;
+
+           if (write_log)
+           {
+             logfile << "2Jf nJf  2Ji nJi  2Lambda = " << setw(3) << setprecision(1) << settings.J2_f[Jf] << " " << fvec+1
+             << "    " << setw(3) << setprecision(1) << settings.J2_i[Ji] << " " << ivec+1
+             << "    " << setw(3) << setprecision(1) << Lambda*2  << std::endl;
+             logfile << "======= One Body Terms ======" << std::endl;
+             logfile << std::setw(4) << "a" << " " << std::setw(4) << "b"
+                     << std::setw(14) << "obtd(a,b)" << " "
+                     << std::setw(14) << "<a||Op||b>" << " "
+                     << std::setw(14) << "obtd * Op" << " " 
+                     << std::setw(14) << "Sum obtd * Op" << std::endl;
+              int nc = TensorOp1b.n_cols;
+              int nr = TensorOp1b.n_rows;
+              float runningsum = 0;
+              for (int c=0;c<nc;c++)
+              {
+                for (int r=0;r<nr;r++)
+                {
+                  runningsum += obtd(r,c) * TensorOp1b(r,c);
+                  logfile << std::setw(4) << std::fixed << c << " " << std::setw(4) << std::fixed << r
+                          << std::setw(14) << std::fixed << std::setprecision(6) << obtd(r,c) << " "
+                          << std::setw(14) << std::fixed << std::setprecision(6) << TensorOp1b(r,c) << " "
+                          << std::setw(14) << std::fixed << std::setprecision(6) << obtd(r,c) * TensorOp1b(r,c) << " " 
+                          << std::setw(14) << std::fixed << std::setprecision(6) << runningsum << std::endl;
+                }
+              }
+           }
+
        }
        
        if (settings.tensor_op_files.size()>1)
        {
          double tbme = arma::accu( TensorOp2b % tbtd);
          TensorME2(Jf,Ji)(fvec,ivec) = tbme;
+
+           if (write_log)
+           {
+             logfile << "======= Two Body Terms ======" << std::endl;
+             logfile << std::setw(4) << "a" << " " << std::setw(4) << "b"
+                     << std::setw(14) << "tbtd(a,b)" << " "
+                     << std::setw(14) << "<a||Op||b>" << " "
+                     << std::setw(14) << "tbtd * Op" << " " 
+                     << std::setw(14) << "Sum tbtd * Op" << std::endl;
+              int nc = TensorOp2b.n_cols;
+              int nr = TensorOp2b.n_rows;
+              float runningsum = 0;
+              for (int c=0;c<nc;c++)
+              {
+                for (int r=0;r<nr;r++)
+                {
+                  runningsum += tbtd(r,c) * TensorOp2b(r,c);
+                  logfile << std::setw(4) << std::fixed << c << " " << std::setw(4) << std::fixed << r
+                          << std::setw(14) << std::fixed << std::setprecision(6) << tbtd(r,c) << " "
+                          << std::setw(14) << std::fixed << std::setprecision(6) << TensorOp2b(r,c) << " "
+                          << std::setw(14) << std::fixed << std::setprecision(6) << tbtd(r,c) * TensorOp2b(r,c) << " " 
+                          << std::setw(14) << std::fixed << std::setprecision(6) << runningsum << std::endl;
+                }
+              }
+              logfile << "#" << std::endl;
+              logfile << "#" << std::endl;
+           }
+
        }
   
        if (settings.J2_i[Ji]==settings.J2_f[Jf] and OpScalar1b.size()>0)
