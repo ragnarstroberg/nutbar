@@ -1004,7 +1004,7 @@ arma::mat TransitionDensity::GetOneBodyTransitionOperator( string filename, int&
     int tz2b = m_orbits[jorbits[b]].tz2;
     int la = m_orbits[jorbits[a]].l2/2;
     int lb = m_orbits[jorbits[b]].l2/2;
-    if ( (abs(j2a-j2b) > 2*Rank_J) or (j2a+j2b < 2*Rank_J) and abs(Op_ab)>1e-6 )
+    if ( ( (std::abs(j2a-j2b) > 2*Rank_J) or (j2a+j2b < 2*Rank_J) ) and std::abs(Op_ab)>1e-6 )
     {
       std::cout << "WARNING: mat. el. violates triangle contition for rank-" << Rank_J << " operator. -- " << ain << " " << bin << " " << Op_ab << std::endl;
       continue;
@@ -1091,7 +1091,7 @@ arma::mat TransitionDensity::GetTwoBodyTransitionOperator( string filename , int
     int lb = m_orbits[jorbits[b]].l2/2;
     int lc = m_orbits[jorbits[c]].l2/2;
     int ld = m_orbits[jorbits[d]].l2/2;
-    if ( (abs(Jab-Jcd) > Rank_J) or (Jab+Jcd < Rank_J) and abs(Op_abcd)>1e-6 )
+    if ( ((std::abs(Jab-Jcd) > Rank_J) or (Jab+Jcd < Rank_J)) and std::abs(Op_abcd)>2e-6 )
     {
       std::cout << "WARNING: mat. el. violates triangle contition for rank-" << Rank_J << " operator. -- "
                << ain << " " << bin << " " << cin << " " << din << " " << Jab << " " << Jcd << " " << Op_abcd << std::endl;
