@@ -1,6 +1,6 @@
 // A JM state is a proton or neutron state with good J and M, expressed in an M-scheme basis
 // It should be formed by combining NuProj and NuBasis in a straightforward way
-// These then form the basis in which the eigenvectors in NuVec are expressed.
+// These then form the basis in which the eigenstd::vectors in NuVec are expressed.
 #ifndef JMState_h
 #include "NuBasis.hh"
 #include "NuProj.hh"
@@ -9,19 +9,16 @@
 #include <string>
 #include <unordered_map>
 
-using namespace std;
 
-
-
-class JMState
+struct JMState
 {
- public:
   int J2, T2, M2;//, pindx;
-  vector<int> pindx;
-  vector<vector<part_type>> partition;
-  unordered_map<key_type,float> m_coefs;
-  vector<MschemeOrbit> m_orbits;
+  std::vector<int> pindx;
+  std::vector<std::vector<part_type>> partition;
+  std::unordered_map<key_type,float> m_coefs;
+  std::vector<MschemeOrbit> m_orbits;
   Profiler profiler;
+  static const int gwords;
 
   JMState();
   JMState(const JMState&)=default;
@@ -29,7 +26,7 @@ class JMState
   JMState(const NuBasis& nubasis, const NuProj& nuproj, int istate);
 
   void Print() const;
-  string PrintMstate(key_type vec_in) const;
+  std::string PrintMstate(key_type vec_in) const;
 
   void Normalize();
   void EliminateZeros();

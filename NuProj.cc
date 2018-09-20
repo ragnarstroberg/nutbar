@@ -1,4 +1,17 @@
+
+#include <iostream>
+#include <fstream>
+#include <stdlib.h>
+#include <stdint.h>
+#include <iomanip>
+#include <vector>
+#include <string>
+#include <cstdint>
+
 #include "NuProj.hh"
+
+
+const int NuProj::delimiter_length = 4;
 
 
 NuProj::NuProj()
@@ -6,24 +19,24 @@ NuProj::NuProj()
 {}
 
 
-void NuProj::ReadFile(string fname)
+void NuProj::ReadFile(std::string fname)
 {
 
  int nwords;
  Clear();
 
- ifstream infile(fname, ios::binary );
+ std::ifstream infile(fname, std::ios::binary );
 
- infile.seekg(DELIMITER_LENGTH,ios::cur);
+ infile.seekg(delimiter_length,std::ios::cur);
  infile.read((char*)&nptt, sizeof(nptt));
- infile.seekg(DELIMITER_LENGTH,ios::cur);
+ infile.seekg(delimiter_length,std::ios::cur);
 
  for (int isp=0;isp<nptt;isp++)
  {
 
     int32_t pindx_in=-1, ngood_in=-1, j_in=-1, t_in=-1, dim_in=-1;
     float x_in=-1;
-    vector<part_type> partition;
+    std::vector<part_type> partition;
 
     infile.read((char*)&nwords, sizeof(nwords));
     infile.read((char*)&pindx_in, sizeof(pindx_in));
@@ -65,23 +78,23 @@ void NuProj::ReadFile(string fname)
 
 void NuProj::PrintProj()
 {
-  cout << "ngood = " << ngood << endl;
-  cout << endl;
+  std::cout << "ngood = " << ngood << std::endl;
+  std::cout << std::endl;
 
   for (int igood=0;igood<ngood;++igood)
   {
-    cout << "basis state: " << igood << endl;
-    cout << "pindx: " << pindx[igood] << endl;
-    cout << "j: " << j[igood] << endl;
-    cout << "t: " << t[igood] << endl;
-    cout << "dim: " << dim[igood] << endl;
-    cout << "x: " << x[igood] << endl;
-    cout << "coef: ";
-    for (auto c : coef_st[igood]) cout << c << " ";
-    cout << endl;
-    cout << endl;
+    std::cout << "basis state: " << igood << std::endl;
+    std::cout << "pindx: " << pindx[igood] << std::endl;
+    std::cout << "j: " << j[igood] << std::endl;
+    std::cout << "t: " << t[igood] << std::endl;
+    std::cout << "dim: " << dim[igood] << std::endl;
+    std::cout << "x: " << x[igood] << std::endl;
+    std::cout << "coef: ";
+    for (auto c : coef_st[igood]) std::cout << c << " ";
+    std::cout << std::endl;
+    std::cout << std::endl;
   }
-  cout << endl;
+  std::cout << std::endl;
 
 
 }

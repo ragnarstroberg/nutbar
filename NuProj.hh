@@ -9,24 +9,20 @@
 #include <string>
 #include <cstdint>
 
-#define DELIMITER_LENGTH 4
-
-using namespace std;
 
 typedef int16_t part_type;
 typedef int64_t mvec_type;
 
-class NuProj
+struct NuProj
 {
- public:
-
   int32_t nptt,ngood;
-  vector<int32_t> no_spart,pindx,j,t,dim,max_cM2,max_cTz2;
-  vector<float> x;
-  vector<vector<float>> coef_st;
+  std::vector<int32_t> no_spart,pindx,j,t,dim,max_cM2,max_cTz2;
+  std::vector<float> x;
+  std::vector<std::vector<float>> coef_st;
+  static const int delimiter_length;
   
   NuProj();
-  void ReadFile(string fname);
+  void ReadFile(std::string fname);
   void PrintProj();
   void Clear();
 

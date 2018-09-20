@@ -9,25 +9,20 @@
 #include <string>
 #include <cstdint>
 
-#define DELIMITER_LENGTH 4
 
-using namespace std;
-
-//typedef int16_t part_type;
-//typedef int64_t mvec_type;
-
-class NuVec
+struct NuVec
 {
- public:
 
   int32_t no_state,no_level; // states are the basis vectors, levels are the eigenvectors.
   int J2;
-  vector<float> alpha; //eigenvalues
-  vector<vector<float>> coefT; // eigenvectors.
+  std::vector<float> alpha; //eigenvalues
+  std::vector<std::vector<float>> coefT; // eigenvectors.
+
+  static const int delimiter_length;
   
   NuVec();
   NuVec(int J2);
-  void ReadFile(string fname);
+  void ReadFile(std::string fname);
   void PrintVectors();
   void PrintDetailedVectors();
   bool CheckOrthoNormal();

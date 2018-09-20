@@ -2,13 +2,18 @@
 #include <numeric>
 #include <cmath>
 #include <sstream>
+#include <iostream>
+#include <iomanip>
+#include <string>
+#include <vector>
 #include <bitset>
 #include <gsl/gsl_sf_coupling.h>
 #include <omp.h>
 
 #include "JMState.hh"
 
-#define gwords 1
+
+const int JMState::gwords = 1;
 
 
 JMState::JMState()
@@ -26,11 +31,11 @@ JMState::JMState(const NuBasis& nubasis, const NuProj& nuproj, int istate)
     m_coefs[nubasis.vec[pindx[0]-1][iibf]] += nuproj.coef_st[istate][iibf];
   }
 #ifdef VERBOSE
-  cout << "JMState::JMstate  about to call EliminateZeros. istate = " << istate << endl;
+  std::cout << "JMState::JMstate  about to call EliminateZeros. istate = " << istate << std::endl;
 #endif
   EliminateZeros();
 #ifdef VERBOSE
-  cout << "JMState::JMstate done" << endl;
+  std::cout << "JMState::JMstate done" << std::endl;
 #endif
 }
 
@@ -39,33 +44,32 @@ JMState::JMState(const NuBasis& nubasis, const NuProj& nuproj, int istate)
 
 void JMState::Print() const
 {
-  cout << "2J = " << J2 << endl;
-  cout << "2MJ = " << M2 << endl;
-  cout << "Partition index = ";
-  for (size_t i=0;i<pindx.size()-1;++i) cout << pindx[i] << " x ";
-  cout << pindx.back() << endl;
+  std::cout << "2J = " << J2 << std::endl;
+  std::cout << "2MJ = " << M2 << std::endl;
+  std::cout << "Partition index = ";
+  for (size_t i=0;i<pindx.size()-1;++i) std::cout << pindx[i] << " x ";
+  std::cout << pindx.back() << std::endl;
   float sum_coef = 0;
   for ( auto it_state : m_coefs )
   {
-    cout << fixed << setw(11) << setprecision(8) << it_state.first << " :  "
-         << fixed << setw(11) << setprecision(8) << it_state.second;
+    std::cout << std::fixed << std::setw(11) << std::setprecision(8) << it_state.first << " :  "
+         << std::fixed << std::setw(11) << std::setprecision(8) << it_state.second;
     sum_coef += it_state.second*it_state.second;
     for (int g=0;g<gwords;++g)
     {
-//       cout << "   " << bitset<8*gwords*sizeof(mvec_type)>(it_state.first[g]) << endl;
-       cout << "   " << PrintMstate(it_state.first) << endl;
+       std::cout << "   " << PrintMstate(it_state.first) << std::endl;
     }
            
   }
-  cout << "normalization: " << sqrt(sum_coef) << endl;
-  cout << endl;
+  std::cout << "normalization: " << sqrt(sum_coef) << std::endl;
+  std::cout << std::endl;
 
 }
 
-string JMState::PrintMstate(key_type vec_in) const
+std::string JMState::PrintMstate(key_type vec_in) const
 {
-  ostringstream mstr;
-  vector<int> spaces;
+  std::ostringstream mstr;
+  std::vector<int> spaces;
   int iorb = 0;
   for (auto orb : m_orbits )
   {
@@ -96,8 +100,8 @@ JMState JMState::Jplus()
   {
    auto& mvec_in = it_mstate.first;
    float m_in_coef = it_mstate.second;
-   vector<key_type> mvec_out;
-   vector<float> coefs;
+   std::vector<key_type> mvec_out;
+   std::vector<float> coefs;
    for (size_t i_m=0;i_m<m_orbits.size();++i_m)  
    {
       if ( (not mvec_in[i_m]) or (mvec_in[i_m+1])  ) continue; // Pauli principle
@@ -107,15 +111,9 @@ JMState JMState::Jplus()
       if (mj2==j2) continue;
       key_type temp_mvec_out = mvec_in;
       temp_mvec_out.set(i_m,0).set(i_m+1,1);
-//      mvec_out.push_back( temp_mvec_out );
-//      coefs.push_back( sqrt( j2*(j2+2)-mj2*(mj2+2) )*0.5 );
       jmout.m_coefs[ temp_mvec_out ] += m_in_coef * sqrt( j2*(j2+2)-mj2*(mj2+2) )*0.5;
    }
 
-//   for (size_t i=0;i<coefs.size();i++)
-//   {
-//      jmout.m_coefs[mvec_out[i]] += m_in_coef * coefs[i];
-//   }
   }
   jmout.EliminateZeros();
   jmout.Normalize();
@@ -135,8 +133,8 @@ JMState JMState::Jminus()
   {
    auto& mvec_in = it_mstate.first;
    float m_in_coef = it_mstate.second;
-   vector<key_type> mvec_out;
-   vector<float> coefs;
+   std::vector<key_type> mvec_out;
+   std::vector<float> coefs;
    for (size_t i_m=1;i_m<m_orbits.size();++i_m)  // don't bother starting with 0, since it's already in the lowest m_j state
    {
       if ( (not mvec_in[i_m]) or mvec_in[i_m-1]  ) continue; // Pauli principle
@@ -146,15 +144,9 @@ JMState JMState::Jminus()
       if (mj2==-j2) continue;
       key_type temp_mvec_out = mvec_in;
       temp_mvec_out.set(i_m,0).set(i_m-1,1);
-//      mvec_out.push_back( temp_mvec_out );
-//      coefs.push_back( sqrt( j2*(j2+2)-mj2*(mj2-2) )*0.5 );
       jmout.m_coefs[ temp_mvec_out ] += m_in_coef * sqrt( j2*(j2+2)-mj2*(mj2-2) )*0.5;
    }
 
-//   for (size_t i=0;i<coefs.size();i++)
-//   {
-//      jmout.m_coefs[mvec_out[i]] += m_in_coef * coefs[i];
-//   }
   }
 
   jmout.EliminateZeros();
@@ -214,13 +206,13 @@ JMState JMState::TimeReverse()
 void JMState::RotateToM( int M_in )
 {
   JMState& jm = *this;
-  if (abs(jm.M2-M_in)>abs(jm.M2+M_in))
+  if (std::abs(jm.M2-M_in)>std::abs(jm.M2+M_in))
   {
 //    jm = jm.TimeReverse();
   }
   while( jm.M2 > M_in) jm = jm.Jminus();
   while( jm.M2 < M_in) jm = jm.Jplus();
-//  cout << "Rotated to M_in. M = " << jm.M2 << endl;
+//  std::cout << "Rotated to M_in. M = " << jm.M2 << std::endl;
 }
 
 
@@ -235,13 +227,13 @@ void JMState::Normalize()
 }
 
 
-// Eliminate vectors with zero coefficients
+// Eliminate std::vectors with zero coefficients
 void JMState::EliminateZeros()
 {
-  vector<key_type> zero_keys;
+  std::vector<key_type> zero_keys;
   for ( auto& it_mstate : m_coefs)
   {
-    if (abs(it_mstate.second)<1e-6)
+    if (std::abs(it_mstate.second)<1e-6)
       zero_keys.push_back(it_mstate.first);
   }
   for (auto& k : zero_keys) m_coefs.erase(k);
@@ -304,7 +296,6 @@ float JMState::Norm() const
 JMState JMState::OuterProduct( const JMState& rhs ) const
 {
   JMState jmout;
-//  JMState jmout(*this);
   jmout.m_coefs.clear();
   for (auto& it_m1 : m_coefs)
   {
@@ -312,7 +303,7 @@ JMState JMState::OuterProduct( const JMState& rhs ) const
     {
       if ( (it_m1.first & it_m2.first) != 0) continue;  // cant take an outer product if the two states share an orbit
       double coef = it_m1.second * it_m2.second;
-      if (abs(coef)>1e-8)
+      if (std::abs(coef)>1e-8)
       {
         key_type key = it_m1.first | it_m2.first;
         jmout.m_coefs[ key ] = coef;
@@ -339,19 +330,17 @@ JMState operator*(const double lhs, const JMState& rhs)
 // Clebsch-Gordan coefficient
 double CG(int j2a, int m2a, int j2b, int m2b, int J2, int M2)
 {
-  return (1-abs(j2a-j2b+M2)%4) * sqrt(J2+1) * gsl_sf_coupling_3j(j2a,j2b,J2,m2a,m2b,-M2);
+  return (1-std::abs(j2a-j2b+M2)%4) * sqrt(J2+1) * gsl_sf_coupling_3j(j2a,j2b,J2,m2a,m2b,-M2);
 }
 
 
 
 JMState TensorProduct( JMState jm1, JMState jm2, int J, int M)
 {
-  int m1 = min(jm1.J2, M+jm2.J2);
+  int m1 = std::min(jm1.J2, M+jm2.J2);
   int m2 = M-m1;
-  int m1_min = max(-jm1.J2, M-jm2.J2);
+  int m1_min = std::max(-jm1.J2, M-jm2.J2);
 
-//  JMState jmout(jm1);
-//  jmout.m_coefs.clear();
   JMState jmout;
   jmout.SetJ(J);
   jmout.SetM(M);
@@ -367,17 +356,11 @@ JMState TensorProduct( JMState jm1, JMState jm2, int J, int M)
   {
     double clebsch = CG(jm1.J2, jm1.M2, jm2.J2, jm2.M2, J, M);
 
-//  t_start = omp_get_wtime();
-    if (abs(clebsch)>1e-4)
+    if (std::abs(clebsch)>1e-4)
        jmout += clebsch * ( jm1.OuterProduct(jm2) ) ;
-//  jm1.profiler.timer["OuterProduct"] += omp_get_wtime() - t_start;
 
-//  t_start = omp_get_wtime();
     jm1 = jm1.Jminus();
-//  jm1.profiler.timer["jm1_minus"] += omp_get_wtime() - t_start;
-//  t_start = omp_get_wtime();
     jm2 = jm2.Jplus();
-//  jm1.profiler.timer["jm2_plus"] += omp_get_wtime() - t_start;
     if (jm2.M2 > jm2.J2) break;
   }
 

@@ -1,26 +1,31 @@
 
 #include <cmath>
 #include <numeric>
+#include <vector>
+#include <string>
+#include <bitset>
+#include <iostream>
+#include <iomanip>
 #include "NuBasis.hh"
 
-#define DELIMITER_LENGTH 4
 
 const int NuBasis::gwords = 1; // this is good if the modelspace has <=64 m-states. Otherwise, we may need to do some tinkering.
+//const int NuBasis::delimiter_length = 4;
 
 
 NuBasis::NuBasis()
 {}
 
 
-void NuBasis::ReadFile(string fname)
+void NuBasis::ReadFile(std::string fname)
 {
   Clear();
-  ifstream infile(fname, ios::binary );
+  std::ifstream infile(fname, std::ios::binary );
   if (not infile.good() )
   {
-   cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
-   cout << "!! ERROR: Trouble in NuBasis::ReadFile --" << fname << "  !!" << endl;
-   cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
+   std::cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
+   std::cout << "!! ERROR: Trouble in NuBasis::ReadFile --" << fname << "  !!" << std::endl;
+   std::cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
     exit(EXIT_FAILURE) ;
   }
 
@@ -79,15 +84,15 @@ void NuBasis::ReadFile(string fname)
 
 
 
-void NuBasis::ReadSPS(string fname)
+void NuBasis::ReadSPS(std::string fname)
 {
 
-  ifstream infile( fname );
+  std::ifstream infile( fname );
   if ( not infile.good() )
   {
-   cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
-   cout << "!! ERROR: Trouble reading SPS file " << fname << "  !!" << endl;
-   cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
+   std::cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
+   std::cout << "!! ERROR: Trouble reading SPS file " << fname << "  !!" << std::endl;
+   std::cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
    exit(EXIT_FAILURE);
   }
   int nshells;
@@ -115,40 +120,40 @@ void NuBasis::ReadSPS(string fname)
 
 void NuBasis::PrintBasis()
 {
-  cout << "Number of Partitions: " << no_spart << endl;
-  cout << "Total number with MJ=J: " << sum_nJT << endl;
+  std::cout << "Number of Partitions: " << no_spart << std::endl;
+  std::cout << "Total number with MJ=J: " << sum_nJT << std::endl;
   for (int isp=0;isp<no_spart;++isp)
   {
-    cout << endl;
-    cout << "isp = " << isp << endl;
-    cout << "partition index: " << pindx[isp] << endl;
-    cout << "Number with MJ=J: " << nJT[isp] << endl;
-    cout << "J*2: " << j[isp] << endl;
-    cout << "T*2: " << t[isp] << endl;
-    cout << "Number of M-scheme configurations: " << ibf[isp] << endl;
-    cout << "Maximum M*2 for this partition: " << max_cM2[isp] << endl;
-    cout << "Maximum Tz*2 for this parition: " << max_cTz2[isp] << endl;
-    cout << "Parition: ";
-    for (auto c : partition[isp]) cout << int(c) << " ";
-    cout << endl;
+    std::cout << std::endl;
+    std::cout << "isp = " << isp << std::endl;
+    std::cout << "partition index: " << pindx[isp] << std::endl;
+    std::cout << "Number with MJ=J: " << nJT[isp] << std::endl;
+    std::cout << "J*2: " << j[isp] << std::endl;
+    std::cout << "T*2: " << t[isp] << std::endl;
+    std::cout << "Number of M-scheme configurations: " << ibf[isp] << std::endl;
+    std::cout << "Maximum M*2 for this partition: " << max_cM2[isp] << std::endl;
+    std::cout << "Maximum Tz*2 for this parition: " << max_cTz2[isp] << std::endl;
+    std::cout << "Parition: ";
+    for (auto c : partition[isp]) std::cout << int(c) << " ";
+    std::cout << std::endl;
     for (int i=0;i<ibf[isp];i++) 
     {
-        cout << "  i: " << i << endl;
+        std::cout << "  i: " << i << std::endl;
         for (int g=0;g<gwords;++g)
         {
-           cout << "  " << setw(10) << vec[isp][i][g] << "   " << bitset<8*gwords*sizeof(mvec_type)>(vec[isp][i][g]) << endl;
-//           cout << "  " << setw(10) << vec[isp][i][g] << "   " << bitset<8*gwords*sizeof(mvec_type)>(TimeReverse(vec[isp][i])[g]) << endl;
-//           vector<vector<mvec_type>> mvec_out;
-           vector<key_type> mvec_out;
-           vector<float> coef_st;
+           std::cout << "  " << std::setw(10) << vec[isp][i][g] << "   " << std::bitset<8*gwords*sizeof(mvec_type)>(vec[isp][i][g]) << std::endl;
+//           std::cout << "  " << std::setw(10) << vec[isp][i][g] << "   " << std::bitset<8*gwords*sizeof(mvec_type)>(TimeReverse(vec[isp][i])[g]) << std::endl;
+//           std::vector<std::vector<mvec_type>> mvec_out;
+           std::vector<key_type> mvec_out;
+           std::vector<float> coef_st;
 //           LoweringOperator( vec[isp][i], mvec_out, coef_st);
-//           cout << "------------- Lowering operator --------------------" << endl;
+//           std::cout << "------------- Lowering operator --------------------" << std::endl;
 //           for (size_t ilow=0;ilow<mvec_out.size();++ilow)
 //           {
-//             cout << "  " << setw(10) << coef_st[ilow] << " x " << bitset<8*gwords*sizeof(mvec_type)>(mvec_out[ilow][0]) << endl;
+//             std::cout << "  " << std::setw(10) << coef_st[ilow] << " x " << std::bitset<8*gwords*sizeof(mvec_type)>(mvec_out[ilow][0]) << std::endl;
 //           }
         }
-        vector<int> occ;
+        std::vector<int> occ;
 //        for (int iword=0;iword<gwords;++iword)
 //        {
          for (int ibit=0;ibit<sizeof(mvec_type)*8;++ibit)
@@ -158,9 +163,9 @@ void NuBasis::PrintBasis()
            if ( vec[isp][i][ibit] )  occ.push_back(ibit);
          }
 //        }
-        for (auto o : occ ) cout << o << " ";
-        cout << endl;
-        cout << endl;
+        for (auto o : occ ) std::cout << o << " ";
+        std::cout << std::endl;
+        std::cout << std::endl;
     }
   }
 
@@ -174,109 +179,10 @@ void NuBasis::PrintSPS()
   for (size_t i=0;i<m_orbits.size();++i)
   {
     auto& mo = m_orbits[i];
-    cout << i << ": " << mo.n << " " << mo.l2 << " " << mo.j2 << " " << mo.mj2 << " " << mo.tz2 << endl;
+    std::cout << i << ": " << mo.n << " " << mo.l2 << " " << mo.j2 << " " << mo.mj2 << " " << mo.tz2 << std::endl;
   }
 }
 
-
-
-
-
-
-
-
-/*
-// Apply a lowering operator to an m-scheme state
-// This is just a sum of lowering operators to each orbit, with the Pauli principle enforced.
-//void NuBasis::LoweringOperator( vector<mvec_type>& mvec_in, vector<vector<mvec_type>>& mvec_out, vector<float>& coefs)
-void NuBasis::LoweringOperator( key_type& mvec_in, vector<key_type>& mvec_out, vector<float>& coefs)
-{
-   for (size_t i_m=1;i_m<m_orbits.size();++i_m)  // don't bother starting with 0, since it's already in the lowest m_j state
-   {
-//      int iword = i_m/(sizeof(mvec_type)*8);
-//      int ibit = i_m%(sizeof(mvec_type)*8);
-//      if (ibit<1) continue;
-//      if ( (not((mvec_in[iword]>>ibit)&0x1L)) or (mvec_in[iword]>>(ibit-1))&0x1L  ) continue; // Pauli principle
-      if ( (not((mvec_in>>i_m)&0x1L)) or (mvec_in>>(i_m-1))&0x1L  ) continue; // Pauli principle
-      
-      int j2  = m_orbits[i_m].j2;
-      int mj2 = m_orbits[i_m].mj2;
-      if (mj2==-j2) continue;
-//      vector<mvec_type> temp_mvec_out = mvec_in;
-      key_type temp_mvec_out = mvec_in;
-//      temp_mvec_out[iword] &= ~(0x1L << (ibit));
-      temp_mvec_out &= ~(0x1L << (i_m));
-//      temp_mvec_out[iword] |=  (0x1L << (ibit-1));
-      temp_mvec_out |=  (0x1L << (i_m-1));
-      mvec_out.push_back( temp_mvec_out );
-      coefs.push_back( sqrt( j2*(j2+1)-mj2*(mj2-1) )*0.5 );
-   }
-   float norm = sqrt( inner_product(begin(coefs),end(coefs),begin(coefs),0.));
-   if (abs(norm)>1e-9)
-     for (size_t i=0;i<coefs.size();i++) coefs[i] /= norm;
-
-}
-*/
-
-
-/*
-// Apply a raising operator to an m-scheme state
-// This is just a sum of raising operators to each orbit, with the Pauli principle enforced.
-//void NuBasis::RaisingOperator( vector<mvec_type>& mvec_in, vector<vector<mvec_type>>& mvec_out, vector<float>& coefs)
-void NuBasis::RaisingOperator( key_type& mvec_in, vector<key_type>& mvec_out, vector<float>& coefs)
-{
-   for (size_t i_m=0;i_m<m_orbits.size()-1;++i_m)  // don't bother with the last one, since it's already in the highest m_j state
-   {
-      int iword = i_m/(sizeof(mvec_type)*8);
-      int ibit = i_m%(sizeof(mvec_type)*8);
-      if (ibit==sizeof(mvec_type)*8) continue;
-      if ( not(mvec_in[iword]>>ibit)&1 or (mvec_in[iword]>>(ibit-1))&1  ) continue;
-      
-      int j2 = m_orbits[i_m].j2;
-      int mj2 = m_orbits[i_m].mj2;
-      if (mj2==j2) continue;
-//      vector<mvec_type> temp_mvec_out = mvec_in;
-      key_type temp_mvec_out = mvec_in;
-      temp_mvec_out[iword] &= ~(0x1L << (ibit));
-      temp_mvec_out[iword] |=  (0x1L << (ibit+11));
-      mvec_out.push_back( temp_mvec_out );
-      coefs.push_back( sqrt( j2*(j2+1)-mj2*(mj2-1) )*0.5 );
-   }
-
-}
-*/
-
-/*
-//vector<mvec_type> NuBasis::TimeReverse( vector<mvec_type>& mvec_in)
-key_type NuBasis::TimeReverse( key_type& mvec_in)
-{
-   
-   size_t i_m=0;
-   vector<mvec_type> mvec_out = mvec_in;
-   while (i_m<gwords*sizeof(mvec_type)*8) 
-   {
-      int iword = i_m /(sizeof(mvec_type)*8);
-      size_t i_m_local = i_m % (sizeof(mvec_type)*8);
-      int mj2 = m_orbits[i_m_local].mj2;
-      int j2 = m_orbits[i_m_local].j2;
-      if (mj2>0)
-      {
-        i_m += (j2-mj2)/2+1;
-        continue;
-      }
-      size_t i_r = i_m - mj2; // time reversed m-state << TODO: This isn't right
-      int iword_r = i_r /(sizeof(mvec_type)*8);
-      i_r = i_r %(sizeof(mvec_type)*8);
-      if ( (mvec_out[iword]>>i_m_local)&0x1L ^ (mvec_out[iword_r]>>i_r)&0x1L)
-      {
-        mvec_out[iword] ^= (0x1L << i_m_local);
-        mvec_out[iword_r] ^= (0x1L << i_r);
-      }
-      i_m++;
-   }
-   return mvec_out;
-}
-*/
 
 
 
