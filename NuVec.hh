@@ -22,7 +22,8 @@ struct NuVec
   
   NuVec();
   NuVec(int J2);
-  void ReadFile(std::string fname);
+//  void ReadFile(std::string fname);
+  void ReadFile(std::string fname, int32_t max_levels=1e9);
   void PrintVectors();
   void PrintDetailedVectors();
   bool CheckOrthoNormal();

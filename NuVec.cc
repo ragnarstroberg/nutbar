@@ -19,7 +19,10 @@ NuVec::NuVec(int J2)
 : J2(J2)
 {}
 
-void NuVec::ReadFile(std::string fname)
+
+
+//void NuVec::ReadFile(std::string fname)
+void NuVec::ReadFile(std::string fname, int32_t max_levels)
 {
 
  int nwords=0;
@@ -33,7 +36,6 @@ void NuVec::ReadFile(std::string fname)
   }
 
 
-// infile.read((char*)&nwords, delimiter_length);
  infile.read((char*)&nwords, delimiter_length);
  if (nwords != sizeof(no_state)+sizeof(no_level))
  {
@@ -46,11 +48,11 @@ void NuVec::ReadFile(std::string fname)
  infile.read((char*)&no_level, sizeof(no_level));
  infile.read((char*)&nwords, delimiter_length);
 
+ no_level = std::min( no_level, max_levels); // if we don't want to use all the eigenstates, don't bother reading them in.
+
  alpha.resize(no_level);
  coefT.resize(no_level,std::vector<float>(no_state));
 
-// std::cout << "no_state: " << no_state << std::endl;
-// std::cout << "no_level: " << no_level << std::endl;
  size_t blocksize = 2 * delimiter_length + no_state*sizeof(alpha[0]) + no_state*sizeof(coefT[0][0]);
 
  for (int ilevel=0;ilevel<no_level;++ilevel)

@@ -17,7 +17,15 @@ typedef int64_t mvec_type;
 typedef std::bitset<KEY_BITS> key_type;
 
 
-struct MschemeOrbit;
+//struct MschemeOrbit;
+struct MschemeOrbit
+{
+  int n,l2,j2,mj2,tz2;
+
+  MschemeOrbit(int n, int l2, int j2, int mj2, int tz2): n(n),l2(l2),j2(j2),mj2(mj2),tz2(tz2){};
+};
+
+
 
 struct NuBasis
 {
@@ -40,12 +48,6 @@ struct NuBasis
 };
 
 
-struct MschemeOrbit
-{
-  int n,l2,j2,mj2,tz2;
-
-  MschemeOrbit(int n, int l2, int j2, int mj2, int tz2): n(n),l2(l2),j2(j2),mj2(mj2),tz2(tz2){};
-};
 
 
 

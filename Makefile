@@ -37,7 +37,7 @@ ifeq ($(VERBOSE),on)
   FLAGS += -DVERBOSE
 endif
 
-OBJ = NuVec.o NuBasis.o NuProj.o JMState.o JBasis.o TransitionDensity.o Profiler.o ReadWrite.o
+OBJ = NuVec.o NuBasis.o NuProj.o JMState.o JBasis.o TransitionDensity.o Profiler.o ReadWrite.o Operators.o
 EXE = nutbar
 #EXE = nutbar_test
 
