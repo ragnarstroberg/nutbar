@@ -61,11 +61,13 @@ int main(int argc, char** argv)
   readwrite.PrintOperatorNames();
  
 
+  std::cout << "Reading Nushell Files" << std::endl;
   // Read a bunch of NuShellX files, and put things into
   // the elaborate data structures contained in TransitionDensity
   readwrite.ReadNuShellFiles( trans );
 
 
+  std::cout << "Calculating Mscheme Amplitudes" << std::endl;
   // if we're not reading the transition densities from file, we have to go ahead and calculate them.
   if ( not settings.densities_from_file  )
   {
@@ -79,7 +81,7 @@ int main(int argc, char** argv)
   }
   
 
-
+  std::cout << "Read in Operators... "<< std::endl;
 
   std::vector<ScalarOperator> ScalarOps;
   std::vector<ScalarNME> scalarnme;
@@ -108,9 +110,10 @@ int main(int argc, char** argv)
 
   if ( not readwrite.settings.densities_from_file )
   {
-    readwrite.WriteDensityHeader( trans );
+    readwrite.WriteDensityHeader( );
   }
 
+  std::cout << "Calculate densities" << std::endl;
 
   for (size_t indexJi=0;indexJi<settings.J2_i.size();++indexJi )
   {
@@ -120,11 +123,13 @@ int main(int argc, char** argv)
      {
       for (int fvec = 0; fvec<settings.NJ_f[indexJf]; ++fvec)
       {
+
        if (settings.basename_vectors_i == settings.basename_vectors_f)
        {
         if ( settings.J2_i[indexJi]==settings.J2_f[indexJf] and fvec>ivec) continue;
         if ( (settings.diagonal_only) and ( (settings.J2_i[indexJi]!=settings.J2_f[indexJf]) or (ivec!=fvec)) )  continue;
        }
+
        arma::mat obtd,tbtd;
        arma::vec td_ax; // a+ operator
        arma::mat td_axaxa; // a+a+a operator
@@ -134,7 +139,7 @@ int main(int argc, char** argv)
          obtd = readwrite.ReadOBTD(indexJi,ivec,indexJf,fvec,TensorOp.Lambda*2, trans);
          tbtd = readwrite.ReadTBTD(indexJi,ivec,indexJf,fvec,TensorOp.Lambda*2, trans);
        }
-       else
+       else  // if we're not reading from file, we need to calculate then densities
        {
          obtd = trans.CalcOBTD(indexJi,ivec,indexJf,fvec,TensorOp.Lambda*2,settings);
          readwrite.WriteOBTD(indexJi,ivec,indexJf,fvec,TensorOp.Lambda*2, obtd);
@@ -147,6 +152,7 @@ int main(int argc, char** argv)
          {
            td_ax = trans.CalcTransitionDensity_ax( indexJi, ivec, indexJf, fvec, settings);
            td_axaxa = trans.CalcTransitionDensity_axaxa( indexJi, ivec, indexJf, fvec, settings);
+           readwrite.WriteLog_Dagger_ax( DaggerOps[0], td_ax );
          }
        }
  

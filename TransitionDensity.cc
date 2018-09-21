@@ -384,14 +384,9 @@ double TransitionDensity::TD_ax(int J_index_i, int eigvec_i, int J_index_f, int 
  
   int Mi = J2i%2;
   int Mf = J2f%2;
-//  int mu = Mf-Mi;
   int ma = Mf-Mi;
 
-
-  
   double td = 0;
-//  int ma_min = std::max(-j2_a,mu-j2_b);
-//  int ma_max = std::min(j2_a,mu+j2_b);
 
   std::vector<key_type> keys_i;
   std::vector<double> amp_vec_i;
@@ -404,9 +399,6 @@ double TransitionDensity::TD_ax(int J_index_i, int eigvec_i, int J_index_f, int 
      amp_vec_i.push_back(amp_i);
   }
 
-
-
-//  double clebsch_fi = CG(J2i,Mi,Lambda2,mu,J2f,Mf);
   double clebsch_fi = CG(J2i,Mi,j2_a,ma,J2f,Mf);
   if (std::abs(clebsch_fi)<1e-9)
   {
@@ -425,41 +417,33 @@ double TransitionDensity::TD_ax(int J_index_i, int eigvec_i, int J_index_f, int 
   }
 
 
-    int ia = m_index_a - ( j2_a -ma )/2;
+  int ia = m_index_a - ( j2_a -ma )/2;
 
-    // convention: tilded destruction operator b~(m) = (-1)**(jb + mb) b(-m)
-    //                                         b(m)  = (-1)**(jb -mb) b~(-m)
-//    int phase_b = (1-(j2_b-mb)%4);
-//    double clebsch = CG(j2_a,ma,j2_b,-mb,Lambda2,mu) ;
+  // loop through initial state amplitudes
+  for (size_t iamp=0; iamp<amp_vec_i.size(); ++iamp)
+  {
+    auto& key = keys_i[iamp];
+    auto& amp_i = amp_vec_i[iamp];
 
-    // loop through initial state amplitudes
-    for (size_t iamp=0; iamp<amp_vec_i.size(); ++iamp)
-    {
-      auto& key = keys_i[iamp];
-      auto& amp_i = amp_vec_i[iamp];
-
-      if (key[ia]) continue; // if orbit a is occupied in the initial configuration, we get zero
-
-//      if ( not key[ib] ) continue;
-      auto new_key = key;
-//      new_key.set(ia,1);
-//      if ( new_key[ia] ) continue;
-      new_key.set(ia,1);
-      if (amplitudes_f.find(new_key) == amplitudes_f.end() ) continue;
+    if (key[ia]) continue; // if orbit a is occupied in the initial configuration, we get zero
 
 
-      int phase_ladder = 1 - 2*(ia%2); // pick up a phase from commuting the a+ over to its place
+    auto new_key = key;
+    new_key.set(ia,1);
+    if (amplitudes_f.find(new_key) == amplitudes_f.end() ) continue;
 
-//      for (int iphase=std::min(ia,ib)+1;iphase<std::max(ia,ib);++iphase) if( key[iphase]) phase_ladder *=-1;
 
-      double amp_f = amplitudes_f[new_key][J_index_f][eigvec_f];
+    // pick up a phase from commuting the a+ over to its place
+    int phase_ladder = 1;
+    for (int iphase=0;iphase<ia;++iphase) if( key[iphase]) phase_ladder *=-1;
 
-      td += amp_i * amp_f * phase_ladder;
-    }
-//  }
+
+    double amp_f = amplitudes_f[new_key][J_index_f][eigvec_f];
+
+    td += amp_i * amp_f * phase_ladder;
+  }
   
   td *= - sqrt(J2f+1.) / clebsch_fi;  // minus sign from Wigner-Eckart convention of a phase (-1)^{2*lambda}, and lambda=ja is half-integer in this case.
-
 
   return td;
 }
@@ -575,7 +559,6 @@ arma::mat TransitionDensity::CalcTBTD( int J_index_i, int eigvec_i, int J_index_
 
 arma::vec TransitionDensity::CalcTransitionDensity_ax( int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, Settings& settings)
 {
-
   double t_start = omp_get_wtime();
 
   auto& jorbits = settings.jorbits;
@@ -584,6 +567,8 @@ arma::vec TransitionDensity::CalcTransitionDensity_ax( int J_index_i, int eigvec
   int Jf = Jlist_f[J_index_f];
   size_t njorb = jorbits.size();
   arma::vec td(njorb,arma::fill::zeros);
+  std::cout << __func__ << "   Ji Jf eig_i, eig_f " << Ji << " " << Jf << " " << eigvec_i << " " << eigvec_f << std::endl;
+
 //  std::ofstream densout( densfile_name, std::ios::app );
 //  if ( densfile_name != "none")
 //  {
