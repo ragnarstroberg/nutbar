@@ -44,7 +44,7 @@ class TransitionDensity
 
 
   double TD_ax(int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int m_index_a );
-  double TD_axaxa(int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int m_index_a, int m_index_b, int m_index_c, int J2ab );
+  double TD_axaxa(int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int m_index_a, int m_index_b, int m_index_c, int J2ab, int Lambda2);
 
   arma::mat CalcOBTD( int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int Lambda2, Settings& settings);
   arma::mat CalcTBTD( int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int Lambda2, Settings& settings);

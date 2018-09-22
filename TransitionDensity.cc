@@ -443,7 +443,7 @@ double TransitionDensity::TD_ax(int J_index_i, int eigvec_i, int J_index_f, int 
     td += amp_i * amp_f * phase_ladder;
   }
   
-  td *= - sqrt(J2f+1.) / clebsch_fi;  // minus sign from Wigner-Eckart convention of a phase (-1)^{2*lambda}, and lambda=ja is half-integer in this case.
+  td *= - sqrt((J2f+1.)/(j2_a+1.)) / clebsch_fi;  // minus sign from Wigner-Eckart convention of a phase (-1)^{2*lambda}, and lambda=ja is half-integer in this case.
 
   return td;
 }
@@ -458,9 +458,143 @@ double TransitionDensity::TD_ax(int J_index_i, int eigvec_i, int J_index_f, int 
 
 
 
-double TransitionDensity::TD_axaxa(int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int m_index_a, int m_index_b, int m_index_c, int J2ab )
+double TransitionDensity::TD_axaxa(int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int m_index_a, int m_index_b, int m_index_c, int J2ab, int Lambda2 )
 {
   double td = 0;
+
+  int J2i = Jlist_i[J_index_i];
+  int J2f = Jlist_f[J_index_f];
+  int Mi = J2i%2;
+  int Mf = J2f%2;
+  int mu = Mf-Mi;
+  
+  int j2_a = m_orbits[m_index_a].j2;
+  int j2_b = m_orbits[m_index_b].j2;
+  int j2_c = m_orbits[m_index_c].j2;
+//  int j2_d = m_orbits[m_index_d].j2;
+
+  // start out with the maximally-projected m state
+  m_index_a += (j2_a - m_orbits[m_index_a].mj2)/2;
+  m_index_b += (j2_b - m_orbits[m_index_b].mj2)/2;
+  m_index_c += (j2_c - m_orbits[m_index_c].mj2)/2;
+//  m_index_d += (j2_d - m_orbits[m_index_d].mj2)/2;
+
+
+  // check some triangle conditions
+  if ((J2f+Lambda2 < J2i) or (std::abs(J2f-Lambda2)>J2i)) return 0;
+  if ((j2_a+j2_b<J2ab) or (std::abs(j2_a-j2_b)>J2ab)) return 0;
+//  if ((j2_c+j2_d<J2cd) or (std::abs(j2_c-j2_d)>J2cd)) return 0;
+  if ((J2ab+j2_c < Lambda2) or (std::abs(J2ab-j2_c)>Lambda2)) return 0;
+
+  
+  std::vector<key_type> keys_i;
+  std::vector<double> amp_vec_i;
+  for (auto& it_amp : amplitudes_i )
+  {
+     double amp_i = it_amp.second[J_index_i][eigvec_i];
+     if (std::abs(amp_i)<1e-7) continue;
+     auto& key = it_amp.first;
+     keys_i.push_back( key );
+     amp_vec_i.push_back(amp_i);
+  }
+
+  double clebsch_fi = CG(J2i,Mi,Lambda2,mu,J2f,Mf);
+  if (std::abs(clebsch_fi)<1e-9)
+  {
+     clebsch_fi = CG(J2i,Mi+2,Lambda2,mu-2,J2f,Mf);
+     if (std::abs(clebsch_fi)<1e-9)
+     {
+        std::cout << " ERROR:    Still got zero Clebsch" << std::endl;
+        std::cout << "           J2i=" << J2i << " M2i=" << Mi+2 << " Lambda2=" << Lambda2 << " mu=" << mu-2 << " J2f=" << J2f << " M2f=" << Mf << std::endl;
+        return 0;
+     }
+     else
+     {
+       Jplus(keys_i, amp_vec_i, J2i, Mi);
+       Mi+=2;
+       mu-=2;
+     }
+  }
+
+
+  // Restricted sum a<=b c<=d gives 1/[(1+delta_ab)(1+delta_cd)], while
+  // using normalized TBMEs gives sqrt[ (1+delta_ab)(1+delta_cd) ].
+  // The additional factor of 2 comes from being able to limit ma < mb or mc < md
+
+  double norm = 1;
+  if (m_index_a==m_index_b) norm *= SQRT2;  
+//  if (m_index_c==m_index_d) norm *= SQRT2;  
+
+  int Mab_min = std::max(-J2ab,mu-j2_c);
+  int Mab_max = std::min( J2ab,mu+j2_c);
+  for (int Mab=Mab_min;Mab<=Mab_max;Mab+=2)
+  {
+//    int Mcd = mu - Mab;
+/*
+    mc = Mab - mu;
+    int phasecd = (1- std::abs(J2cd - Mcd)%4); // phase from getting rid of the tildes
+    double clebsch_abcd = CG(J2ab,Mab,J2cd,Mcd,Lambda2,mu);
+    if ( std::abs(clebsch_abcd)<1e-7) continue;
+    int ma_min = std::max(-j2_a, Mab-j2_b);
+    int ma_max = std::min(j2_a, Mab+j2_b);
+    if (m_index_a==m_index_b) ma_max = std::min(ma_max, Mab/2);
+
+    for (int ma=ma_min;ma<=ma_max;ma+=2)
+    {
+      int mb=Mab-ma;
+      double clebsch_ab = CG(j2_a,ma, j2_b,mb, J2ab,Mab);
+      if ( std::abs(clebsch_ab)<1e-7) continue;
+      int ia = m_index_a - ( j2_a -ma )/2;
+      int ib = m_index_b - ( j2_b -mb )/2;
+      if (ib==ia) continue;
+      int mc_min = std::max(-j2_c, Mab-j2_d);
+      int mc_max = std::min(j2_c, Mab+j2_d);
+      if (m_index_c == m_index_d) mc_max = std::min(j2_c, Mab/2);
+
+      for (int mc=mc_min;mc<=mc_max;mc+=2)
+      {
+        int md = -Mcd-mc;
+        double clebsch_cd = CG(j2_c,mc, j2_d, md, J2cd,-Mcd); // Mcd = -Mab, and another (-) comes from getting rid of the tildes
+        if ( std::abs(clebsch_cd)<1e-7) continue;
+        int ic = m_index_c - ( j2_c -mc )/2;
+        int id = m_index_d - ( j2_d -md )/2;
+        if (ic==id) continue;
+
+
+        for ( size_t iamp=0; iamp<amp_vec_i.size(); ++iamp )
+        {
+          auto& key = keys_i[iamp];
+          auto& amp_i = amp_vec_i[iamp];
+
+          if (not (key[ic] && key[id]) ) continue;
+          auto new_key = key;
+          new_key.set(ic,0).set(id,0); // remove particles from c and then from d  (d-c-)
+          if ( new_key[ia] || new_key[ib]) continue;
+          new_key.set(ib,1).set(ia,1); // add particles to b and then to a  (a+b+)
+
+          auto iter_newkey = amplitudes_f.find(new_key);
+          if (iter_newkey == amplitudes_f.end() 
+            or iter_newkey->second.size() < J_index_f
+            or iter_newkey->second[J_index_f].size() < eigvec_f) continue;
+
+          double amp_f = iter_newkey->second[J_index_f][eigvec_f];
+
+          // pick up a phase from commuting the ladder operators
+          int phase_ladder = (ia>ib xor id<ic) ? -1 : 1;
+          for (int iphase = std::min(ic,id)+1;iphase<std::max(ic,id);++iphase)  if( key[iphase]) phase_ladder *=-1;
+          for (int iphase = std::min(ia,ib)+1;iphase<std::max(ia,ib);++iphase)  if( new_key[iphase]) phase_ladder *=-1;
+
+          tbd += amp_i * amp_f * clebsch_abcd * clebsch_ab * clebsch_cd * phasecd * phase_ladder;
+        }
+      }
+    }
+*/
+  }
+
+  td *= sqrt((J2f+1.)/(Lambda2+1.)) / clebsch_fi * norm;
+
+
+
 
   return td;
 }
