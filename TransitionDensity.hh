@@ -49,8 +49,8 @@ class TransitionDensity
   arma::mat CalcOBTD( int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int Lambda2, Settings& settings);
   arma::mat CalcTBTD( int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int Lambda2, Settings& settings);
 
-  arma::vec CalcTransitionDensity_ax( int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, Settings& settings);
-  arma::mat CalcTransitionDensity_axaxa( int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, Settings& settings);
+  arma::vec CalcTransitionDensity_ax( int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int Lambda2, Settings& settings);
+  arma::mat CalcTransitionDensity_axaxa( int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int Lambda2, Settings& settings);
 
 
   void SetupKets();

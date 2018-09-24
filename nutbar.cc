@@ -112,6 +112,10 @@ int main(int argc, char** argv)
   {
     readwrite.WriteDensityHeader( );
   }
+  if (settings.write_log)
+  {
+    readwrite.WriteLogHeader();
+  }
 
   std::cout << "Calculate densities" << std::endl;
 
@@ -131,8 +135,8 @@ int main(int argc, char** argv)
        }
 
        arma::mat obtd,tbtd;
-       arma::vec td_ax; // a+ operator
-       arma::mat td_axaxa; // a+a+a operator
+       std::vector<arma::vec> td_ax(DaggerOps.size()); // a+ operator
+       std::vector<arma::mat> td_axaxa(DaggerOps.size()); // a+a+a operator
        if ( settings.densities_from_file )
        {
          std::cout << "Reading densities from file..." << std::endl;
@@ -150,9 +154,13 @@ int main(int argc, char** argv)
          }
          if (settings.dagger_op_files.size() > 0 )
          {
-           td_ax = trans.CalcTransitionDensity_ax( indexJi, ivec, indexJf, fvec, settings);
-           td_axaxa = trans.CalcTransitionDensity_axaxa( indexJi, ivec, indexJf, fvec, settings);
-           readwrite.WriteLog_Dagger_ax( DaggerOps[0], td_ax );
+//           for ( auto& dagnme : daggernme )
+           for ( size_t idag=0; idag<DaggerOps.size();idag++ )
+           {
+             td_ax[idag] = trans.CalcTransitionDensity_ax( indexJi, ivec, indexJf, fvec, DaggerOps[idag].Lambda2, settings);
+             td_axaxa[idag] = trans.CalcTransitionDensity_axaxa( indexJi, ivec, indexJf, fvec, DaggerOps[idag].Lambda2, settings);
+
+           }
          }
        }
  
@@ -186,8 +194,21 @@ int main(int argc, char** argv)
            scalarnme[iop].TwoBody(indexJf,indexJi)(fvec,ivec) = arma::accu( ScalarOps[iop].TwoBody % tbtd ) ;
          }
        }
-      }
-    }
+
+       for ( size_t idag=0; idag<DaggerOps.size(); ++idag)
+       {
+             if (settings.write_log)
+             {
+               readwrite.WriteLog_Dagger_ax( indexJi, ivec, indexJf, fvec,  DaggerOps[idag], td_ax[idag] );
+               readwrite.WriteLog_Dagger_axaxa( DaggerOps[idag], td_axaxa[idag] );
+             }
+
+             daggernme[idag].ax(indexJf,indexJi)(fvec,ivec) = arma::accu( td_ax[idag] % DaggerOps[idag].Op_ax );
+             daggernme[idag].axaxa(indexJf,indexJi)(fvec,ivec) = arma::accu( td_axaxa[idag] % DaggerOps[idag].Op_axaxa );
+       }
+
+      } // for fvec
+    } // for ivec
    }
   }
 
@@ -206,6 +227,12 @@ int main(int argc, char** argv)
     readwrite.WriteScalarResults( trans, ScalarOps, scalarnme );
   }
 
+
+  if (DaggerOps.size()>0)
+  {
+    std::cout << "WriteDaggerResults..." << std::endl;
+    readwrite.WriteDaggerResults( trans, DaggerOps, daggernme );
+  }
 
 
 
