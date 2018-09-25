@@ -472,19 +472,15 @@ double TransitionDensity::TD_axaxa(int J_index_i, int eigvec_i, int J_index_f, i
   int j2_a = m_orbits[m_index_a].j2;
   int j2_b = m_orbits[m_index_b].j2;
   int j2_c = m_orbits[m_index_c].j2;
-//  int j2_d = m_orbits[m_index_d].j2;
 
   // start out with the maximally-projected m state
   m_index_a += (j2_a - m_orbits[m_index_a].mj2)/2;
   m_index_b += (j2_b - m_orbits[m_index_b].mj2)/2;
   m_index_c += (j2_c - m_orbits[m_index_c].mj2)/2;
-//  m_index_d += (j2_d - m_orbits[m_index_d].mj2)/2;
-
 
   // check some triangle conditions
-  if ((J2f+Lambda2 < J2i) or (std::abs(J2f-Lambda2)>J2i)) return 0;
-  if ((j2_a+j2_b<J2ab) or (std::abs(j2_a-j2_b)>J2ab)) return 0;
-//  if ((j2_c+j2_d<J2cd) or (std::abs(j2_c-j2_d)>J2cd)) return 0;
+  if ((J2f+Lambda2 < J2i)   or (std::abs(J2f-Lambda2)>J2i)) return 0;
+  if ((j2_a+j2_b<J2ab)      or (std::abs(j2_a-j2_b)>J2ab)) return 0;
   if ((J2ab+j2_c < Lambda2) or (std::abs(J2ab-j2_c)>Lambda2)) return 0;
 
   
@@ -499,6 +495,7 @@ double TransitionDensity::TD_axaxa(int J_index_i, int eigvec_i, int J_index_f, i
      amp_vec_i.push_back(amp_i);
   }
 
+  // check to make sure we have a non-zero clebsch so we can divide to invert the Wigner-Eckart theorem.
   double clebsch_fi = CG(J2i,Mi,Lambda2,mu,J2f,Mf);
   if (std::abs(clebsch_fi)<1e-9)
   {
@@ -521,16 +518,14 @@ double TransitionDensity::TD_axaxa(int J_index_i, int eigvec_i, int J_index_f, i
   // Restricted sum a<=b c<=d gives 1/[(1+delta_ab)(1+delta_cd)], while
   // using normalized TBMEs gives sqrt[ (1+delta_ab)(1+delta_cd) ].
   // The additional factor of 2 comes from being able to limit ma < mb or mc < md
-
-  double norm = 1;
-  if (m_index_a==m_index_b) norm *= SQRT2;  
-//  if (m_index_c==m_index_d) norm *= SQRT2;  
+//  double norm = 1;
+//  if (m_index_a==m_index_b) norm *= SQRT2;  
+  double norm = (m_index_a==m_index_b) ? SQRT2 : 1;
 
   int Mab_min = std::max(-J2ab,mu-j2_c);
   int Mab_max = std::min( J2ab,mu+j2_c);
   for (int Mab=Mab_min;Mab<=Mab_max;Mab+=2)
   {
-//    int Mcd = mu - Mab;
 
     int mc = Mab - mu;
     int ic = m_index_c - ( j2_c -mc )/2;
@@ -539,7 +534,7 @@ double TransitionDensity::TD_axaxa(int J_index_i, int eigvec_i, int J_index_f, i
     if ( std::abs(clebsch_abc)<1e-7) continue;
     int ma_min = std::max(-j2_a, Mab-j2_b);
     int ma_max = std::min(j2_a, Mab+j2_b);
-    if (m_index_a==m_index_b) ma_max = std::min(ma_max, Mab/2);   // if orbit a == orbit b, then restrict ma<mb
+    if (m_index_a==m_index_b) ma_max = std::min(ma_max, Mab/2);   // if orbit a == orbit b, then restrict ma<mb. This is why a few lines above we multiply by SQRT2 rather than divide.
 
     for (int ma=ma_min;ma<=ma_max;ma+=2)
     {
@@ -549,10 +544,6 @@ double TransitionDensity::TD_axaxa(int J_index_i, int eigvec_i, int J_index_f, i
       int ia = m_index_a - ( j2_a -ma )/2;
       int ib = m_index_b - ( j2_b -mb )/2;
       if (ib==ia) continue;
-//      int mc_min = std::max(-j2_c, Mab-j2_d);
-//      int mc_max = std::min(j2_c, Mab+j2_d);
-//      if (m_index_c == m_index_d) mc_max = std::min(j2_c, Mab/2);
-
 
 
 
@@ -705,41 +696,18 @@ arma::vec TransitionDensity::CalcTransitionDensity_ax( int J_index_i, int eigvec
 
   auto& jorbits = settings.jorbits;
 
-  int Ji = Jlist_i[J_index_i];
-  int Jf = Jlist_f[J_index_f];
   size_t njorb = jorbits.size();
-  arma::vec td(njorb,arma::fill::zeros);
-//  std::cout << __func__ << "   Ji Jf eig_i, eig_f " << Ji << " " << Jf << " " << eigvec_i << " " << eigvec_f << std::endl;
-
-//  std::ofstream densout( densfile_name, std::ios::app );
-//  if ( densfile_name != "none")
-//  {
-//     densout << std::endl;
-//     densout << "Jf nJf  Ji nJi = " << std::setw(3) << std::setprecision(1) << Jf*0.5 << " " << eigvec_f+1
-//             << "    " << std::setw(3) << std::setprecision(1) << Ji*0.5 << " " << eigvec_i+1
-//             << std::endl;
-//     densout << "-------------- <f||a+||i> --------------------" << std::endl;
-//  }
+  arma::vec td(njorb, arma::fill::zeros);
 
   for (size_t i=0; i<njorb; ++i)
   {
     int j2i = m_orbits[jorbits[i]].j2;
     if (j2i != Lambda2) continue;
-//    int jmin = 0;
-//    if (basename_i==basename_f and Ji==Jf and eigvec_i==eigvec_f) jmin = i;
-//    for (size_t j=jmin; j<njorb; ++j)
-//    {
-      td(i) = TD_ax( J_index_i, eigvec_i, J_index_f, eigvec_f, jorbits[i] );
-//      if (Lambda2 == 0)  obtd(i,j) /= sqrt( Ji+1 );
 
-//      if (densfile_name != "none" and std::abs(td(i))>1e-7)
-//      {
-//         densout << std::setw(3) << i << " "  << std::setw(12) << std::fixed << std::setprecision(8) << td(i)  << std::endl;
-//      }
+    td(i) = TD_ax( J_index_i, eigvec_i, J_index_f, eigvec_f, jorbits[i] );
 
   }
 
-//  densout.close();
   Profiler::timer["CalcTD_ax"] += omp_get_wtime() - t_start;
   return td;
 
@@ -756,17 +724,17 @@ arma::mat TransitionDensity::CalcTransitionDensity_axaxa( int J_index_i, int eig
   auto& ket_J = settings.ket_J;
   auto& jorbits = settings.jorbits;
   size_t njorb = jorbits.size();
+  size_t nkets = ket_J.size();
 
-  arma::mat td(ket_J.size(), jorbits.size(), arma::fill::zeros);
+  arma::mat td( nkets, njorb, arma::fill::zeros);
 
   int Ji = Jlist_i[J_index_i];
   int Jf = Jlist_f[J_index_f];
-//  std::cout << __func__ << "   Ji Jf eig_i, eig_f  Lambda2 " << Ji << " " << Jf << " " << eigvec_i << " " << eigvec_f << "  " << Lambda2 << std::endl;
   if (std::abs(Ji-Jf)>Lambda2 or Ji+Jf<Lambda2) return td;
 
 
   #pragma omp parallel for schedule(dynamic,1)
-  for (size_t ibra=0; ibra<ket_a.size(); ibra++)
+  for (size_t ibra=0; ibra<nkets; ibra++)
   {
     int a = ket_a[ibra];
     int b = ket_b[ibra];
