@@ -57,6 +57,8 @@ class ReadWrite
 
 
   void WriteLogHeader();
+  void WriteLog_Scalar1b( int indexJi, int ivec, int indexJf, int fvec, ScalarOperator& ScalarOp,  arma::mat& obtd );
+  void WriteLog_Scalar2b( ScalarOperator& ScalarOp , arma::mat& tbtd );
   void WriteLog_Tensor1b( int indexJi, int ivec, int indexJf, int fvec, TensorOperator& TensorOp,  arma::mat& obtd );
   void WriteLog_Tensor2b( TensorOperator& TensorOp , arma::mat& tbtd );
   void WriteLog_Dagger_ax( int indexJi, int ivec, int indexJf, int fvec, DaggerOperator& DaggerOp, arma::vec& td_ax );

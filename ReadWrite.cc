@@ -204,6 +204,11 @@ void ReadWrite::ReadInput(std::istream& input, std::string mode)
   while (iss >> opfilename)
   {
     if (opfilename.find_first_of("#!") != std::string::npos) break;
+    if (opfilename.find_last_of(".") == std::string::npos)
+    {
+      std::cout << " OOPS! No extension on that file name. Exiting..." << std::endl;
+      exit(EXIT_FAILURE); 
+    }
     if (opfilename.substr(opfilename.find_last_of(".")) == ".int")
     {
       settings.scalar_op_files.push_back(opfilename);
@@ -430,8 +435,8 @@ arma::mat ReadWrite::ReadOBTD( int J_index_i, int eigvec_i, int J_index_f, int e
 arma::mat ReadWrite::ReadTBTD( int J_index_i, int eigvec_i, int J_index_f, int eigvec_f, int Lambda2, TransitionDensity& trans)
 {
 
-  auto& ket_a = settings.ket_a;
-  auto& ket_b = settings.ket_b;
+//  auto& ket_a = settings.ket_a;
+//  auto& ket_b = settings.ket_b;
   auto& ket_J = settings.ket_J;
 
   bool found_it = false;
@@ -674,7 +679,7 @@ std::string ReadWrite::FindXVCFile( std::string basename, int Jtot, int Zval, in
 void ReadWrite::ReadNuShellFiles( TransitionDensity& trans )
 {
 
-  double t_start;
+//  double t_start;
   GetAZFromFileName();
   std::cout << "Acore, Zcore = " << settings.Acore << " " << settings.Zcore << std::endl;
 
@@ -764,6 +769,8 @@ void ReadWrite::ReadNuShellFiles( TransitionDensity& trans )
 
    int imax = std::min( NJ, trans.nuvec_list_i.back().no_level) ; // how many eigenvectors with Jtot are there in the file, and how many are we interested in? 
 
+   settings.NJ_i[iJ] = imax; // update this so we don't try to use something that ain't there.
+
    trans.blank_vector_i.push_back(std::vector<float>(imax, 0.));
    settings.total_number_levels_i += imax;
 
@@ -794,6 +801,7 @@ void ReadWrite::ReadNuShellFiles( TransitionDensity& trans )
       trans.nuvec_list_f.back().ReadFile(vecfile,NJ);
     }
    int imax = std::min( NJ, trans.nuvec_list_f.back().no_level) ; // how many eigenvectors with Jtot are there in the file, and how many are we interested in? 
+   settings.NJ_f[iJ] = imax; // update this so we don't try to use something that ain't there.
 
    trans.blank_vector_f.push_back(std::vector<float>(imax, 0.));
    settings.total_number_levels_f += imax;
@@ -850,10 +858,12 @@ ScalarOperator ReadWrite::ReadScalarOperator( std::string filename )
   auto& ket_J = settings.ket_J;
 
 
+
   auto& Op0b = Op.ZeroBody;
   auto& Op1b = Op.OneBody;
   auto& Op2b = Op.TwoBody;
 
+  Op0b = 0.;
   Op1b.zeros( jorbits.size(), jorbits.size() );
   Op2b.zeros( ket_a.size(), ket_a.size() );
   
@@ -873,8 +883,9 @@ ScalarOperator ReadWrite::ReadScalarOperator( std::string filename )
     getline(opfile,line);
     auto zb_ptr = line.find("Zero body term:");
     if ( zb_ptr != std::string::npos)
-       std::istringstream( line.substr(zb_ptr + 16) ) >> Op0b;
+       std::istringstream( line.substr(zb_ptr + 16) ) >> Op0b; // 16 = size of string "Zero body term:" + 1.
   }
+
 
   std::istringstream iss( line );
   int dummy;
@@ -884,6 +895,7 @@ ScalarOperator ReadWrite::ReadScalarOperator( std::string filename )
      iss >> Op1b(i,i);
      Op1b(i,i) *= sqrt( m_orbits[jorbits[i]].j2 + 1); // convert to a reduced matrix element
   }
+
 
 
   int a,b,c,d,J,T;
@@ -917,6 +929,7 @@ ScalarOperator ReadWrite::ReadScalarOperator( std::string filename )
     size_t ibra=0,iket=0;
     while( ibra<ket_a.size() and not( (ket_a[ibra]==a) and (ket_b[ibra]==b) and ket_J[ibra]==2*J) ) ibra++;
     while( iket<ket_a.size() and not( (ket_a[iket]==c) and (ket_b[iket]==d) and ket_J[iket]==2*J) ) iket++;
+
 
     Op2b(ibra,iket)  += ME ; 
     Op2b(iket,ibra) = Op2b(ibra,iket);
@@ -1358,6 +1371,68 @@ void ReadWrite::WriteLogHeader()
 
 
 
+void ReadWrite::WriteLog_Scalar1b( int indexJi, int ivec, int indexJf, int fvec, ScalarOperator& ScalarOp, arma::mat& obtd )
+{
+  logfile << "2Jf nJf  2Ji nJi  2Lambda = " << std::setw(3) << std::setprecision(1) << settings.J2_f[indexJf] << " " << fvec+1
+  << "    " << std::setw(3) << std::setprecision(1) << settings.J2_i[indexJi] << " " << ivec+1
+  << "    " << std::setw(3) << std::setprecision(1) <<  0  << std::endl;
+  logfile << "======= One Body Terms ======" << std::endl;
+  logfile << std::setw(4) << "a" << " " << std::setw(4) << "b"
+          << std::setw(14) << "obtd(a,b)" << " "
+          << std::setw(14) << "<a||Op||b>" << " "
+          << std::setw(14) << "obtd * Op" << " " 
+          << std::setw(14) << "Sum obtd * Op" << std::endl;
+   int nc = ScalarOp.OneBody.n_cols;
+   int nr = ScalarOp.OneBody.n_rows;
+   float runningsum = 0;
+   for (int c=0;c<nc;c++)
+   {
+     for (int r=0;r<nr;r++)
+     {
+       double obme = obtd(r,c) * ScalarOp.OneBody(r,c);
+       runningsum += obme;
+       logfile << std::setw(4) << std::fixed << c << " " << std::setw(4) << std::fixed << r
+               << std::setw(14) << std::fixed << std::setprecision(6) << obtd(r,c) << " "
+               << std::setw(14) << std::fixed << std::setprecision(6) << ScalarOp.OneBody(r,c) << " "
+               << std::setw(14) << std::fixed << std::setprecision(6) << obme << " " 
+               << std::setw(14) << std::fixed << std::setprecision(6) << runningsum << std::endl;
+     }
+   }
+
+}
+
+
+
+void ReadWrite::WriteLog_Scalar2b( ScalarOperator& ScalarOp, arma::mat& tbtd )
+{
+  logfile << "======= Two Body Terms ======" << std::endl;
+  logfile << std::setw(4) << "A" << " " << std::setw(4) << "B"
+          << std::setw(14) << "tbtd(A,B)" << " "
+          << std::setw(14) << "<A||Op||B>" << " "
+          << std::setw(14) << "tbtd * Op" << " " 
+          << std::setw(14) << "Sum tbtd * Op" << std::endl;
+   int nc = ScalarOp.TwoBody.n_cols;
+   int nr = ScalarOp.TwoBody.n_rows;
+   float runningsum = 0;
+   for (int c=0;c<nc;c++)
+   {
+     for (int r=0;r<nr;r++)
+     {
+       double tbme = tbtd(r,c) * ScalarOp.TwoBody(r,c);
+       runningsum += tbme;
+       logfile << std::setw(4) << std::fixed << r << " " << std::setw(4) << std::fixed << c
+               << std::setw(14) << std::fixed << std::setprecision(6) << tbtd(r,c) << " "
+               << std::setw(14) << std::fixed << std::setprecision(6) << ScalarOp.TwoBody(r,c) << " "
+               << std::setw(14) << std::fixed << std::setprecision(6) << tbme << " " 
+               << std::setw(14) << std::fixed << std::setprecision(6) << runningsum << std::endl;
+     }
+   }
+   logfile << "#" << std::endl;
+   logfile << "#" << std::endl;
+}
+
+
+
 void ReadWrite::WriteLog_Tensor1b( int indexJi, int ivec, int indexJf, int fvec, TensorOperator& TensorOp, arma::mat& obtd )
 {
   logfile << "2Jf nJf  2Ji nJi  2Lambda = " << std::setw(3) << std::setprecision(1) << settings.J2_f[indexJf] << " " << fvec+1
@@ -1780,7 +1855,7 @@ void ReadWrite::WriteEGV(TransitionDensity& trans, std::string fname)
   
   
   // Write m-scheme basis occupations and eigenstd::vector coefficients
-  size_t bits_per_word = 8*sizeof(mvec_type);
+//  size_t bits_per_word = 8*sizeof(mvec_type);
   for (auto it_amp : trans.amplitudes_i)
   {
     auto& mvec = it_amp.first;

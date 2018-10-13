@@ -190,8 +190,15 @@ int main(int argc, char** argv)
        {
          for (size_t iop=0; iop<ScalarOps.size(); ++iop)
          {
-           scalarnme[iop].OneBody(indexJf,indexJi)(fvec,ivec) = arma::accu( ScalarOps[iop].OneBody % obtd ) ;
-           scalarnme[iop].TwoBody(indexJf,indexJi)(fvec,ivec) = arma::accu( ScalarOps[iop].TwoBody % tbtd ) ;
+           // We divide by sqrt(2J+1) because for a scalar operator we typically expect to be given < f | Op | i >, rather than <f || Op || i >.
+           // I'm not 100% sure this is the best way to go, but it's what we're doing for now.
+           scalarnme[iop].OneBody(indexJf,indexJi)(fvec,ivec) = arma::accu( ScalarOps[iop].OneBody % obtd ) / sqrt( settings.J2_i[indexJi] +1.0 );
+           scalarnme[iop].TwoBody(indexJf,indexJi)(fvec,ivec) = arma::accu( ScalarOps[iop].TwoBody % tbtd ) / sqrt( settings.J2_i[indexJi] +1.0 );
+           if (settings.write_log)
+           {
+             readwrite.WriteLog_Scalar1b( indexJi, ivec, indexJf, fvec,  ScalarOps[iop], obtd );
+             readwrite.WriteLog_Scalar2b( ScalarOps[iop], tbtd );
+           }
          }
        }
 

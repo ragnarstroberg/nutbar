@@ -1,7 +1,7 @@
 
 CPP = g++
 
-FLAGS = -std=c++11 -fopenmp -O3 -march=native
+FLAGS = -std=c++11 -fopenmp -O3 -march=native -Wall
 #INCLUDE = -I$(HOME)/include/armadillo
 INCLUDE = -Iarmadillo
 LIBS = -lgsl -lopenblas
@@ -23,7 +23,7 @@ endif
 
 ifeq ($(OS),MACOS)
 #  FLAGS     = -Xpreprocessor -fopenmp -O3 -march=native -std=c++11 -fPIC 
-  FLAGS     = -Xpreprocessor -fopenmp -O3  -std=c++11 
+  FLAGS     = -Xpreprocessor -fopenmp -O3  -std=c++11  -Wall
   LIBS += -lomp
 endif
 

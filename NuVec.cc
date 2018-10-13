@@ -49,11 +49,12 @@ void NuVec::ReadFile(std::string fname, int32_t max_levels)
  infile.read((char*)&nwords, delimiter_length);
 
  no_level = std::min( no_level, max_levels); // if we don't want to use all the eigenstates, don't bother reading them in.
+// std::cout << " In " << __func__ << "  no_levels = " << no_level << "  no_state = " << no_state << std::endl;
 
  alpha.resize(no_level);
  coefT.resize(no_level,std::vector<float>(no_state));
 
- size_t blocksize = 2 * delimiter_length + no_state*sizeof(alpha[0]) + no_state*sizeof(coefT[0][0]);
+// size_t blocksize = 2 * delimiter_length + no_state*sizeof(alpha[0]) + no_state*sizeof(coefT[0][0]);
 
  for (int ilevel=0;ilevel<no_level;++ilevel)
  {
@@ -66,6 +67,15 @@ void NuVec::ReadFile(std::string fname, int32_t max_levels)
    }
    infile.read((char*)&(alpha[ilevel]), sizeof(alpha[ilevel]));
    infile.read((char*)&(coefT[ilevel][0]), no_state*sizeof(coefT[ilevel][0]));
+
+//   double sumsqr = 0; // delete this...
+//   std::cout << "  coeft = ";
+//   for (auto co : coefT[ilevel] )
+//   {
+//     std::cout << co << "  ";
+//     sumsqr += co*co;
+//   }
+//   std::cout << "     sumsqr = " << sumsqr << std::endl;
   
    infile.read((char*)&nwords, delimiter_length);
  }

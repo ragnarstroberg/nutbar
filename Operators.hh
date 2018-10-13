@@ -7,6 +7,10 @@
 #include "Settings.hh"
 
 
+// This sort of makes me wonder if
+// I actually need a different struct
+// for scalar operators, rather than
+// making them a special case of tensor operators.
 struct ScalarOperator
 {
   double ZeroBody;

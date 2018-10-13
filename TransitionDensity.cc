@@ -83,12 +83,16 @@ void TransitionDensity::CalculateMschemeAmplitudes_fi(std::vector<NuVec>& nuvec_
   #endif
 
 
+
+
    if (nuvec.no_state > jbasis.basis_states[J2].size() )
    {
      std::cout << "ERROR -- TransitionDensity::CalculateMschemeAmplitudes_fi -- nuvec.no_state = " << nuvec.no_state << ",  basis_states.size() = " << jbasis.basis_states[J2].size()
           << "   ivec = " << ivec << "  J = " << nuvec.J2/2 << std::endl;
      return;
    }
+
+//   std::cout << "number of states = " << nuvec.no_state << std::endl;
   
    double t_start_inner = omp_get_wtime();
    std::vector<std::unordered_map< key_type, std::vector<float> >> local_amplitudes( nthreads );
@@ -103,10 +107,13 @@ void TransitionDensity::CalculateMschemeAmplitudes_fi(std::vector<NuVec>& nuvec_
    {
      int thread_num = omp_get_thread_num();
      const JMState jmst = jbasis.GetBasisState(istate,J2,MJ2);  // can we be smarter about picking an initial projection?
+//     std::cout << "istate = " << istate << "   J2 MJ2 = " << J2 << " " << MJ2 << "   size of m_coefs = " << jmst.m_coefs.size() << std::endl;
+//     std::cout << "  size of jmstates a,b = " << jbasis.jmstates_a.size() << " " << jbasis.jmstates_b.size() << std::endl;
      for (auto& it_mstate : jmst.m_coefs)
      {
        auto& key = it_mstate.first;
        const float& m_coef = it_mstate.second;
+//       std::cout << "     " << key.to_string().substr(24,20) << "   " << key.to_string().substr(44,20) << "     " << m_coef << std::endl;
 
        if( local_amplitudes[thread_num].find(key) == local_amplitudes[thread_num].end() ) local_amplitudes[thread_num][key] = std::vector<float>(imax,0.);
        for (size_t ilevel=0;ilevel<imax;++ilevel) local_amplitudes[thread_num][key][ilevel] += m_coef * nuvec.coefT[ilevel][istate];
@@ -156,6 +163,10 @@ double TransitionDensity::OBTD(int J_index_i, int eigvec_i, int J_index_f, int e
   m_index_a += (j2_a - m_orbits[m_index_a].mj2)/2;
   m_index_b += (j2_b - m_orbits[m_index_b].mj2)/2;
 
+//  std::cout << "In OBTD, I think j2_a, j2_b are " << j2_a << " " << j2_b << std::endl;
+//  std::cout << "m_index_a,b = " << m_index_a << " " << m_index_b << std::endl;
+//  std::cout << "J2i   J2f = " << J2i << " " << J2f << "   Mi  Mf = " << Mi << " " << Mf << "    Lambda2,mu = " << Lambda2 << " " << mu << std::endl;
+
   
   // find m-scheme orbits so that m_a = m_b, which will work for mu=0
   double obd = 0;
@@ -193,17 +204,37 @@ double TransitionDensity::OBTD(int J_index_i, int eigvec_i, int J_index_f, int e
   }
 
 
+//  std::cout << "    looping over ma = " << ma_min << " <= ma <= " << ma_max << std::endl;
+//  std::cout << "    for reference, here are the final amplitudes" << std::endl;
+//  for (auto& it : amplitudes_f )
+//  {
+////    std::cout << it.first << std::endl;
+//    std::cout << (it.first).to_string().substr(24,20) << "   " << (it.first).to_string().substr(44,20) << "   " << (it.second)[J_index_f][eigvec_f] << " ";
+//    for (int i=0;i<64;i++)
+//    {
+//      if ( it.first[i] )
+//      {
+//         std::cout << " ( " << i << ": " << m_orbits[i].j2 << " " << m_orbits[i].mj2 << " " << m_orbits[i].tz2 << " )  ";
+//      }
+//    }
+//    std::cout << std::endl;
+//  }
+
   for ( int ma=ma_min;ma<=ma_max;ma+=2)
   {
     int mb = ma - mu;
     int ia = m_index_a - ( j2_a -ma )/2;
     int ib = m_index_b - ( j2_b -mb )/2;
 
+//    std::cout << "        ma mb =  " << ma << " " << mb << std::endl;
+//    std::cout << "       ia,ib = " << ia << " " << ib << std::endl;
+
 
     // convention: tilded destruction operator b~(m) = (-1)**(jb + mb) b(-m)
     //                                         b(m)  = (-1)**(jb -mb) b~(-m)
     int phase_b = (1-(j2_b-mb)%4);
-    double clebsch = CG(j2_a,ma,j2_b,-mb,Lambda2,mu) ;
+    double clebsch = CG(j2_a,ma,j2_b,-mb,Lambda2,mu) ;   // we can probably continue here if the clebsch is zero
+//    std::cout << "        clebsch = " << clebsch << std::endl;
 
     for (size_t iamp=0; iamp<amp_vec_i.size(); ++iamp)
     {
@@ -211,16 +242,23 @@ double TransitionDensity::OBTD(int J_index_i, int eigvec_i, int J_index_f, int e
       auto& amp_i = amp_vec_i[iamp];
 
       if ( not key[ib] ) continue;
+//      std::cout << "  key_i : " << key << std::endl;
+//      std::cout << "  key_i : " << key.to_string().substr(24,20) << "   " << key.to_string().substr(44,20) << std::endl;
       auto new_key = key;
       new_key.set(ib,0);
       if ( new_key[ia] ) continue;
       new_key.set(ia,1);
+//      std::cout << "  key_f : " << new_key.to_string().substr(24,20) << "   " << new_key.to_string().substr(44,20) << std::endl;
       if (amplitudes_f.find(new_key) == amplitudes_f.end() ) continue;
 
 
       int phase_ladder = 1;
       for (int iphase=std::min(ia,ib)+1;iphase<std::max(ia,ib);++iphase) if( key[iphase]) phase_ladder *=-1;
       double amp_f = amplitudes_f[new_key][J_index_f][eigvec_f];
+
+//      std::cout << "  key_f : " << new_key << std::endl;
+
+//      std::cout << " clebsch,amp_i,amp_f,phases = " << clebsch << " " << amp_i << " " << amp_f << " " << phase_ladder << " " << phase_b << std::endl;
 
       obd += clebsch * amp_i * amp_f * phase_ladder * phase_b;
     }
@@ -613,15 +651,22 @@ arma::mat TransitionDensity::CalcOBTD( int J_index_i, int eigvec_i, int J_index_
   arma::mat obtd(njorb,njorb,arma::fill::zeros);
 
 
+//  std::cout << std::endl;
+//  std::cout << "  begin CalcOBTD loop  Ji Jf -> " << Ji << " " << Jf << std::endl;
   for (size_t i=0; i<njorb; ++i)
   {
     int j2i = m_orbits[jorbits[i]].j2;
     int jmin = 0;
     if (settings.same_basename_fi and Ji==Jf and eigvec_i==eigvec_f) jmin = i;
+//    std::cout << "jmin is " << jmin << std::endl;
     for (size_t j=jmin; j<njorb; ++j)
     {
+//      std::cout << " calculating obtd i,j with i,j = " << i << " " << j << " corresponding to ji,jj = " << j2i << " " << m_orbits[jorbits[j]].j2
+//                << "   and tzi tzj = " << m_orbits[jorbits[i]].tz2 << " " << m_orbits[jorbits[j]].tz2 
+//                << std::endl;
       obtd(i,j) = OBTD( J_index_i, eigvec_i, J_index_f, eigvec_f, jorbits[i], jorbits[j], Lambda2);
-      if (Lambda2 == 0)  obtd(i,j) /= sqrt( Ji+1 );
+//      if (Lambda2 == 0)  obtd(i,j) /= sqrt( Ji+1 );   // This is here because we report matrix elements of scalars as not-reduced, but it's a sneaky place to put it.
+//      std::cout << "  and I got a obtd = " << obtd(i,j) << std::endl;
 
       if (settings.same_basename_fi and Ji==Jf and eigvec_i==eigvec_f)
       {
@@ -630,6 +675,7 @@ arma::mat TransitionDensity::CalcOBTD( int J_index_i, int eigvec_i, int J_index_
       }
     }
   }
+//  std::cout << std::endl << " done with loop. " << std::endl;
 
   Profiler::timer["CalcOBTD"] += omp_get_wtime() - t_start;
   return obtd;
@@ -682,7 +728,7 @@ arma::mat TransitionDensity::CalcTBTD( int J_index_i, int eigvec_i, int J_index_
     }
   }
 
-  if (Lambda2==0) tbtd /= sqrt( Ji+1.);
+//  if (Lambda2==0) tbtd /= sqrt( Ji+1.);
 
   Profiler::timer["CalcTBTD"] += omp_get_wtime() - t_start;
   return tbtd;

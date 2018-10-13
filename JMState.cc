@@ -26,9 +26,12 @@ JMState::JMState(const NuBasis& nubasis, const NuProj& nuproj, int istate)
  : J2(nuproj.j[istate]), T2(nuproj.t[istate]), M2(nuproj.j[istate]),pindx(1,nuproj.pindx[istate]),
   partition(nubasis.partition),m_orbits(nubasis.m_orbits)
 {
+//  std::cout << "making a JMState.   looping iibf from zero to  " << nubasis.ibf[pindx[0]-1] << std::endl;
+//  std::cout << "   int the JMState constructor, J2,M2 = " << J2 << " " << M2 << std::endl;
   for (int iibf=0;iibf<nubasis.ibf[pindx[0]-1];++iibf)
   {
     m_coefs[nubasis.vec[pindx[0]-1][iibf]] += nuproj.coef_st[istate][iibf];
+//    std::cout << "just added an element iibf = " << iibf << " to m_coefs.  size of m_coefs = " << m_coefs.size() << std::endl;
   }
 #ifdef VERBOSE
   std::cout << "JMState::JMstate  about to call EliminateZeros. istate = " << istate << std::endl;
@@ -175,7 +178,7 @@ JMState JMState::TimeReverse()
    while (i_m<m_orbits.size()) 
    {
 //      int iword = i_m /(sizeof(mvec_type)*8);
-      size_t i_m_local = i_m % (sizeof(mvec_type)*8);
+//      size_t i_m_local = i_m % (sizeof(mvec_type)*8);
       int mj2 = m_orbits[i_m].mj2;
       int j2 = m_orbits[i_m].j2;
       if (mj2>0)
@@ -206,11 +209,13 @@ JMState JMState::TimeReverse()
 void JMState::RotateToM( int M_in )
 {
   JMState& jm = *this;
-  if (std::abs(jm.M2-M_in)>std::abs(jm.M2+M_in))
-  {
-//    jm = jm.TimeReverse();
-  }
+//  if (std::abs(jm.M2-M_in)>std::abs(jm.M2+M_in))
+//  {
+////    jm = jm.TimeReverse();
+//  }
+//  std::cout << "In " << __func__ << "  rotating from " << M2 << " to " << M_in << std::endl;
   while( jm.M2 > M_in) jm = jm.Jminus();
+//  std::cout << "After Jminus loop, M = " << M2 << " note jm.M2 = " << jm.M2 << " is it less than " << M_in << " ? " << (jm.M2<M_in) << std::endl;
   while( jm.M2 < M_in) jm = jm.Jplus();
 //  std::cout << "Rotated to M_in. M = " << jm.M2 << std::endl;
 }
@@ -327,7 +332,7 @@ JMState operator*(const double lhs, const JMState& rhs)
 
 
 
-// Clebsch-Gordan coefficient
+// Clebsch-Gordan coefficient, accepts integers equal to twice the corresponding jvalues
 double CG(int j2a, int m2a, int j2b, int m2b, int J2, int M2)
 {
   return (1-std::abs(j2a-j2b+M2)%4) * sqrt(J2+1) * gsl_sf_coupling_3j(j2a,j2b,J2,m2a,m2b,-M2);
@@ -337,6 +342,7 @@ double CG(int j2a, int m2a, int j2b, int m2b, int J2, int M2)
 
 JMState TensorProduct( JMState jm1, JMState jm2, int J, int M)
 {
+//  std::cout << "Calling TensorProduct to combine two jmstates with j2,m2 = " << jm1.J2 << " " << jm1.M2 << "  " << jm2.J2 << " "  << jm2.M2 << "   to J = " << J << "  M = " << M << std::endl;
   int m1 = std::min(jm1.J2, M+jm2.J2);
   int m2 = M-m1;
   int m1_min = std::max(-jm1.J2, M-jm2.J2);
@@ -348,19 +354,29 @@ JMState TensorProduct( JMState jm1, JMState jm2, int J, int M)
   for (auto p : jm2.pindx) jmout.pindx.push_back(p);
 
 
+//  std::cout << "  before rotating, M1,M2 = " << jm1.M2 << " " << jm2.M2 << std::endl;
+
   // start jm1 and jm2 in the proper m states
   jm1.RotateToM(m1);
   jm2.RotateToM(m2);
+//  std::cout << " I thought I was rotating to m1,m2 = " << m1 << " " << m2 << std::endl;
+//  std::cout << "  I have " << jm1.M2 << "  " << jm2.M2 << std::endl;
+
+//  std::cout << "In TensorProduct, begin while  " << jm1.M2 << " >= " << m1_min << std::endl;
 
   while(jm1.M2 >= m1_min)
   {
     double clebsch = CG(jm1.J2, jm1.M2, jm2.J2, jm2.M2, J, M);
+//    std::cout << "     jm1.M2 = " << jm1.M2 << "  jm2.M2 = " << jm2.M2 << "   clebsch = " << clebsch  << std::endl;
 
     if (std::abs(clebsch)>1e-4)
        jmout += clebsch * ( jm1.OuterProduct(jm2) ) ;
 
+//    std::cout << "      size of mcoefs = " << jmout.m_coefs.size() << std::endl;
+
     jm1 = jm1.Jminus();
     jm2 = jm2.Jplus();
+//    std::cout << "after Jminus,Jplus, jm2.M2 = " << jm2.M2 << "  jm2.J2 = " << jm2.J2 << std::endl;
     if (jm2.M2 > jm2.J2) break;
   }
 

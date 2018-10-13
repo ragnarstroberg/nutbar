@@ -32,6 +32,7 @@ void NuBasis::ReadFile(std::string fname)
  int nwords;
  sum_nJT=0;
 
+
  infile.read((char*)&nwords, sizeof(nwords));
  infile.read((char*)&no_spart, sizeof(no_spart));
  infile.read((char*)&nwords, sizeof(nwords));
@@ -44,6 +45,9 @@ void NuBasis::ReadFile(std::string fname)
  max_cTz2.resize(no_spart);
  partition.resize(no_spart);
  vec.resize(no_spart);
+
+
+//  std::cout << "In " << __func__ << "  no_spart = " << no_spart << std::endl;
 
  for (int isp=0;isp<no_spart;isp++)
  {
@@ -65,13 +69,22 @@ void NuBasis::ReadFile(std::string fname)
     infile.read((char*)&partition[isp][0], nwords);
     infile.read((char*)&nwords, sizeof(nwords));
     
+
+//    std::cout << "   isp = " << isp << std::endl;
+//    std::cout << "   the partition is ";
+//    for ( auto p : partition[isp] ) std::cout << p << " ";
+//    std::cout << std::endl;
+
+//    std::cout << "ibf = " << ibf[isp] << std::endl;
+
     if (ibf[isp]>0)
     {    
-    infile.read((char*)&nwords, sizeof(nwords));
+      infile.read((char*)&nwords, sizeof(nwords));
       vec[isp].resize(ibf[isp]);
       for (int i=0;i<ibf[isp];i++) 
       {
         infile.read((char*)&vec[isp][i], gwords*sizeof(mvec_type));
+//        std::cout << "    just read a vec i = " << i << "    " << vec[isp][i] << std::endl;
       }
       infile.read((char*)&nwords, sizeof(nwords));
     }
