@@ -777,7 +777,7 @@ void ReadWrite::ReadNuShellFiles( TransitionDensity& trans )
   }
 
 
-  std::cout << "Making jbasis_f" << std::endl;
+//  std::cout << "Making jbasis_f" << std::endl;
   settings.jbasis_f = JBasis( settings.basename_sps + ".sps", Afiles_f, Bfiles_f, settings.J2_f ); // Newly added...
 
   for (size_t iJ=0; iJ<settings.J2_f.size(); iJ++ )
