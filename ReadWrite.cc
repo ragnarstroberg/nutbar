@@ -378,6 +378,7 @@ arma::mat ReadWrite::ReadOBTD( int J_index_i, int eigvec_i, int J_index_f, int e
   int Ji = settings.J2_i[J_index_i];
   int Jf = settings.J2_f[J_index_f];
   size_t njorb = jorbits.size();
+  densityfile.clear();
   densityfile.seekg(std::ios_base::beg); // go back to the beginning of the file (we left it open)
   if (not densityfile.good())
   {
@@ -388,9 +389,9 @@ arma::mat ReadWrite::ReadOBTD( int J_index_i, int eigvec_i, int J_index_f, int e
   }
   std::string line;
   std::ostringstream line_to_find;
-  line_to_find <<  "Jf nJf  Ji nJi  Lambda = "   << std::setw(3) << std::setprecision(1) << Jf*0.5 << " " << eigvec_f+1
-          << "    " << std::setw(3) << std::setprecision(1) << Ji*0.5 << " " << eigvec_i+1
-          << "    " << std::setw(3) << std::setprecision(1) << Lambda2*0.5;
+  line_to_find <<  "Jf nJf  Ji nJi  Lambda = "   << std::setw(4) << std::fixed << std::setprecision(1) << 0.5*Jf << " " << eigvec_f+1
+                                       << "    " << std::setw(4) << std::fixed << std::setprecision(1) << 0.5*Ji << " " << eigvec_i+1
+                                       << "    " << std::setw(4) << std::fixed << std::setprecision(1) << 0.5*Lambda2;
 
 
   while ( getline( densityfile, line) )
@@ -426,7 +427,8 @@ arma::mat ReadWrite::ReadOBTD( int J_index_i, int eigvec_i, int J_index_f, int e
 //  densityfile.close();
   if (not found_it)
   {
-    std::cout << "WARNING!! Didn't find " << line_to_find.str() << "  in nutbar_densities.dat " << std::endl;
+    std::cout << "WARNING!! " << __func__ << "  Didn't find " << line_to_find.str() << "  in nutbar_densities.dat " << std::endl;
+    std::cout << "more info:  J_index_i,f = " << J_index_i << " " << J_index_f << "  Ji,Jf = " << Ji << " " << Jf << "  eigvec_i,f = " << eigvec_i << " " << eigvec_f << std::endl;
   }
   return obtd;
 }
@@ -442,6 +444,7 @@ arma::mat ReadWrite::ReadTBTD( int J_index_i, int eigvec_i, int J_index_f, int e
   bool found_it = false;
   int Ji = settings.J2_i[J_index_i];
   int Jf = settings.J2_f[J_index_f];
+  densityfile.clear();
   densityfile.seekg(std::ios_base::beg); // go back to the beginning of the file (we left it open)
   if (not densityfile.good())
   {
@@ -452,9 +455,9 @@ arma::mat ReadWrite::ReadTBTD( int J_index_i, int eigvec_i, int J_index_f, int e
   }
   std::string line;
   std::ostringstream line_to_find;
-  line_to_find << "Jf nJf  Ji nJi  Lambda = "  << std::setw(3) << std::setprecision(1) << Jf*0.5 << " " << eigvec_f+1
-          << "    " << std::setw(3) << std::setprecision(1) << Ji*0.5 << " " << eigvec_i+1
-          << "    " << std::setw(3) << std::setprecision(1) << Lambda2*0.5;
+  line_to_find << "Jf nJf  Ji nJi  Lambda = "  << std::setw(4) << std::fixed << std::setprecision(1) << 0.5*Jf << " " << eigvec_f+1
+                                     << "    " << std::setw(4) << std::fixed << std::setprecision(1) << 0.5*Ji << " " << eigvec_i+1
+                                     << "    " << std::setw(4) << std::fixed << std::setprecision(1) << 0.5*Lambda2;
 
 
   while ( getline( densityfile, line) )
@@ -489,7 +492,8 @@ arma::mat ReadWrite::ReadTBTD( int J_index_i, int eigvec_i, int J_index_f, int e
   }
   if (not found_it)
   {
-    std::cout << "WARNING!! Didn't find " << line_to_find.str() << "  in nutbar_densities.dat " << std::endl;
+    std::cout << "WARNING!! " << __func__ << "  Didn't find " << line_to_find.str() << "  in nutbar_densities.dat " << std::endl;
+    std::cout << "more info:  J_index_i,f = " << J_index_i << " " << J_index_f << "  Ji,Jf = " << Ji << " " << Jf << "  eigvec_i,f = " << eigvec_i << " " << eigvec_f << std::endl;
   }
   return tbtd;
 }
@@ -544,9 +548,9 @@ void ReadWrite::WriteOBTD( int J_index_i, int eigvec_i, int J_index_f, int eigve
   
 
   densityfile << std::endl;
-  densityfile << "Jf nJf  Ji nJi  Lambda = " << std::setw(3) << std::setprecision(1) << Jf*0.5 << " " << eigvec_f+1
-          << "    " << std::setw(3) << std::setprecision(1) << Ji*0.5 << " " << eigvec_i+1
-          << "    " << std::setw(3) << std::setprecision(1) << Lambda2*0.5  << std::endl;
+  densityfile << "Jf nJf  Ji nJi  Lambda = " << std::setw(4) << std::fixed << std::setprecision(1) << Jf*0.5 << " " << eigvec_f+1
+                                   << "    " << std::setw(4) << std::fixed << std::setprecision(1) << Ji*0.5 << " " << eigvec_i+1
+                                   << "    " << std::setw(4) << std::fixed << std::setprecision(1) << Lambda2*0.5  << std::endl;
   densityfile << "-------------- OBTD ---------------------" << std::endl;
  
 

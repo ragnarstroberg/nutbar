@@ -703,6 +703,8 @@ arma::mat TransitionDensity::CalcTBTD( int J_index_i, int eigvec_i, int J_index_
   int Jf = Jlist_f[J_index_f];
   if (std::abs(Ji-Jf)>Lambda2 or Ji+Jf<Lambda2) return tbtd;
 
+  int deltaTz2 = 2*((settings.Z_f-settings.N_f) - (settings.Z_i-settings.N_i)); // we're using the convention that proton has tz = +1/2
+
 
   #pragma omp parallel for schedule(dynamic,1)
   for (size_t ibra=0;ibra<ket_J.size();++ibra)
@@ -710,11 +712,16 @@ arma::mat TransitionDensity::CalcTBTD( int J_index_i, int eigvec_i, int J_index_
     int a = ket_a[ibra];
     int b = ket_b[ibra];
     int J2ab = ket_J[ibra];
+    int t2a = m_orbits[jorbits[a]].tz2;
+    int t2b = m_orbits[jorbits[b]].tz2;
     size_t iket_min = (settings.same_basename_fi and (Ji == Jf) and (eigvec_i==eigvec_f)) ? ibra : 0;
     for (size_t iket=iket_min;iket<ket_J.size();++iket)
     {
       int c = ket_a[iket];
       int d = ket_b[iket];
+      int t2c = m_orbits[jorbits[c]].tz2;
+      int t2d = m_orbits[jorbits[d]].tz2;
+      if ( (t2a+t2b - t2c-t2d) != deltaTz2 ) continue; // don't calculate things we don't need to. J triangle conditions are checked in TBTD()
       int J2cd = ket_J[iket];
       tbtd(ibra,iket) = TBTD(  J_index_i,  eigvec_i,  J_index_f,  eigvec_f,
                                jorbits[a], jorbits[b],  jorbits[c], jorbits[d],
