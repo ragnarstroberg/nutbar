@@ -53,7 +53,7 @@ struct Settings
 
   Settings() : densities_from_file(false), write_egv(false), write_log(false),
                same_basename_fi(false), same_states_fi(false),
-               Acore(0),Zcore(0), A_i(0), Z_i(0), A_f(0), Z_f(0),
+               Acore(0),Zcore(0), A_i(0), Z_i(0), N_i(0), A_f(0), Z_f(0), N_f(0),
                total_number_levels_i(0), total_number_levels_f(0) 
     {};
 
