@@ -476,19 +476,22 @@ arma::mat ReadWrite::ReadTBTD( int J_index_i, int eigvec_i, int J_index_f, int e
   bool same_i_f =  ( (settings.basename_vectors_i==settings.basename_vectors_f) and (Ji==Jf) and (eigvec_i==eigvec_f) );
   int ibra,iket;
   double tbd;
+  getline( densityfile, line );
   while ( line.size() > 2 )
   {
-    getline( densityfile, line );
     std::istringstream(line) >> ibra >> iket >> tbd;
 
-    int J2ab = ket_J[ibra];
-    int J2cd = ket_J[iket];
+//    int J2ab = ket_J[ibra];
+//    int J2cd = ket_J[iket];
+    int J2ab = ket_J.at(ibra);
+    int J2cd = ket_J.at(iket);
     tbtd(ibra,iket) = tbd;
 
     if (same_i_f)
     {
       tbtd(iket,ibra) = tbtd(ibra,iket) * (1-std::abs(J2ab-J2cd)%4); 
     }
+    getline( densityfile, line );
   }
   if (not found_it)
   {
