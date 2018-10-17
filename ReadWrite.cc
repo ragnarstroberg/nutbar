@@ -85,6 +85,9 @@ void ReadWrite::GetAZFromFileName(  )
 
   if ( settings.A_i < settings.Acore ) settings.A_i +=100;
   if ( settings.A_f < settings.Acore ) settings.A_f +=100;
+
+  settings.N_i = settings.A_i - settings.Z_i;
+  settings.N_f = settings.A_f - settings.Z_f;
   
 }
 
@@ -714,6 +717,8 @@ void ReadWrite::ReadNuShellFiles( TransitionDensity& trans )
       std::cout << __func__ << "  Warning A_f=" << settings.A_f << " and J*2 = " << j << ".  This isn't good" << std::endl;
     }
   }
+  settings.N_i = settings.A_i-settings.Z_i; // make sure this is set
+  settings.N_f = settings.A_f-settings.Z_f; // make sure this is set
   
 
   int nvalence_protons_i  = settings.Z_i - settings.Zcore;
