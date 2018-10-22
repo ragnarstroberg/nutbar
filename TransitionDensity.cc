@@ -703,7 +703,7 @@ arma::mat TransitionDensity::CalcTBTD( int J_index_i, int eigvec_i, int J_index_
   int Jf = Jlist_f[J_index_f];
   if (std::abs(Ji-Jf)>Lambda2 or Ji+Jf<Lambda2) return tbtd;
 
-  int deltaTz2 = 1*((settings.Z_f-settings.N_f) - (settings.Z_i-settings.N_i)); // we're using the convention that proton has tz = +1/2
+  int deltaTz2 = ((settings.Z_f-settings.N_f) - (settings.Z_i-settings.N_i)); // we're using the convention that proton has tz = +1/2
 
 
   #pragma omp parallel for schedule(dynamic,1)
