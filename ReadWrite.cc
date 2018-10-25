@@ -1376,7 +1376,7 @@ void ReadWrite::WriteLogHeader()
   logfile << "   i    a    b    Jab " << std::endl;
   for (size_t i=0; i<ket_a.size(); i++)
   {
-    logfile << std::setw(4) << i << " " << std::setw(4) << ket_a[i] << " " << std::setw(4) << ket_b[i] << " " << std::setw(6) << ket_J[i] << std::endl;
+    logfile << std::setw(4) << i << " " << std::setw(4) << ket_a[i] << " " << std::setw(4) << ket_b[i] << " " << std::setw(6) << ket_J[i]/2 << std::endl;
   }
 
 }

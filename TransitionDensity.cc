@@ -628,7 +628,7 @@ double TransitionDensity::TD_axaxa(int J_index_i, int eigvec_i, int J_index_f, i
 
   }
 
-  td *= sqrt((J2f+1.)/(Lambda2+1.)) / clebsch_fi * norm;
+  td *= -sqrt((J2f+1.)/(Lambda2+1.)) / clebsch_fi * norm; // minus sign from Wigner-Eckart convention of a phase (-1)^{2*lambda}, and lambda=ja is half-integer in this case.
 
 
 
