@@ -95,6 +95,11 @@ int main(int argc, char** argv)
   TensorOperator TensorOp = readwrite.ReadTensorOperator( settings.tensor_op_files);
   TensorNME tensornme(settings, TensorOp);
 
+  if ( ScalarOps.size()>0 and settings.tensor_op_files.size()>0)
+  {
+    std::cout << "TROUBLE!! I'm not smart enough to handle both a scalar and a tensor at the same time. Pathetic, I know...  Bailing out." << std::endl;
+    return 1;
+  }
 
   std::vector<DaggerOperator> DaggerOps;
   std::vector<DaggerNME> daggernme;
@@ -143,7 +148,7 @@ int main(int argc, char** argv)
          obtd = readwrite.ReadOBTD(indexJi,ivec,indexJf,fvec,TensorOp.Lambda*2, trans);
          tbtd = readwrite.ReadTBTD(indexJi,ivec,indexJf,fvec,TensorOp.Lambda*2, trans);
        }
-       else  // if we're not reading from file, we need to calculate then densities
+       else  // if we're not reading from file, we need to calculate the densities
        {
          obtd = trans.CalcOBTD(indexJi,ivec,indexJf,fvec,TensorOp.Lambda*2,settings);
          readwrite.WriteOBTD(indexJi,ivec,indexJf,fvec,TensorOp.Lambda*2, obtd);
